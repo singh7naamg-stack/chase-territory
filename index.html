@@ -112,34 +112,88 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
   <div style="font-family:Georgia,serif;font-size:16px;font-style:italic;color:rgba(0,240,255,0.65);margin-top:8px">Run it. Own it.</div>
   <div class="lbar"><div class="lfill"></div></div>
 </div>
-<div id="s-auth" class="screen hidden">
-  <div class="auth-inner">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-family:Orbitron,sans-serif;font-size:22px;font-weight:900;color:var(--cy);letter-spacing:4px">CHASE</div>
-      <div style="font-size:11px;color:var(--ht);letter-spacing:3px;margin-top:4px">TERRITORY</div>
+<!-- ═══ LANDING PAGE ═══ -->
+<div id="s-landing" class="screen hidden">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px 20px">
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px">
+      <img src="runner.png" style="width:120px;height:120px;object-fit:contain" alt="runner"/>
+      <img src="cyclist.png" style="width:120px;height:120px;object-fit:contain" alt="cyclist"/>
     </div>
-    <div class="auth-tabs">
-      <button class="atab on" id="tab-login" onclick="switchTab('login')">Login</button>
-      <button class="atab" id="tab-signup" onclick="switchTab('signup')">Sign up</button>
+    <div style="font-family:Orbitron,monospace;font-size:44px;font-weight:900;color:#fff;letter-spacing:10px;text-align:center">CHASE</div>
+    <div style="width:200px;height:3px;background:#00f0ff;border-radius:2px;margin:8px auto"></div>
+    <div style="font-family:Orbitron,monospace;font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:8px;margin-top:2px">TERRITORY</div>
+    <div style="font-family:Georgia,serif;font-size:18px;font-style:italic;color:rgba(0,240,255,0.65);margin-top:12px">Run it. Own it.</div>
+  </div>
+  <div style="padding:0 24px;padding-bottom:max(32px,env(safe-area-inset-bottom));display:flex;gap:12px">
+    <button onclick="goTo('login')" style="flex:1;padding:15px;background:var(--cy);border:none;border-radius:var(--r);font-family:Orbitron,monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:#000;cursor:pointer">LOGIN</button>
+    <button onclick="goTo('signup')" style="flex:1;padding:15px;background:transparent;border:1.5px solid var(--cy);border-radius:var(--r);font-family:Orbitron,monospace;font-size:13px;font-weight:700;letter-spacing:2px;color:var(--cy);cursor:pointer">SIGN UP</button>
+  </div>
+</div>
+
+<!-- ═══ LOGIN PAGE ═══ -->
+<div id="s-login" class="screen hidden" style="justify-content:center">
+  <div style="max-width:380px;width:100%;margin:auto;padding:0 24px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:Orbitron,monospace;font-size:24px;font-weight:900;color:var(--cy);letter-spacing:4px">Welcome back</div>
+      <div style="font-size:13px;color:var(--ht);margin-top:6px">Sign in to your account</div>
     </div>
-    <div class="auth-form">
-      <div id="field-uname" style="display:none">
-        <div class="ilbl">Username</div>
-        <input class="inp" id="inp-uname" type="text" placeholder="YourRunnerName" maxlength="20">
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Email</div>
+        <input class="inp" id="login-email" type="email" placeholder="you@example.com">
       </div>
       <div>
-        <div class="ilbl">Email</div>
-        <input class="inp" id="inp-email" type="email" placeholder="you@example.com">
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Password</div>
+        <input class="inp" id="login-pass" type="password" placeholder="password">
       </div>
-      <div>
-        <div class="ilbl">Password</div>
-        <input class="inp" id="inp-pass" type="password" placeholder="password">
-      </div>
-      <div class="err" id="auth-err"></div>
-      <button class="btn-p" id="auth-btn" onclick="submitAuth()">LOGIN</button>
+      <div class="err" id="login-err"></div>
+      <button class="btn-p" id="login-btn" onclick="doLogin()">LOGIN</button>
+      <button onclick="goTo('landing')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back</button>
     </div>
   </div>
 </div>
+
+<!-- ═══ SIGNUP PAGE ═══ -->
+<div id="s-signup" class="screen hidden" style="overflow-y:auto">
+  <div style="max-width:380px;width:100%;margin:auto;padding:40px 24px 40px">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-family:Orbitron,monospace;font-size:22px;font-weight:900;color:var(--cy);letter-spacing:3px">Create account</div>
+      <div style="font-size:13px;color:var(--ht);margin-top:6px">Join the territory battle</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Username</div>
+        <input class="inp" id="su-uname" type="text" placeholder="YourRunnerName" maxlength="20">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Email</div>
+        <input class="inp" id="su-email" type="email" placeholder="you@example.com">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Password</div>
+        <input class="inp" id="su-pass" type="password" placeholder="min 6 characters">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:8px">Gender <span style="color:var(--ht);font-weight:400">(optional)</span></div>
+        <div style="display:flex;gap:8px">
+          <button id="g-male" onclick="setGender('male')" style="flex:1;padding:10px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);color:var(--dm);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">&#9794; Male</button>
+          <button id="g-female" onclick="setGender('female')" style="flex:1;padding:10px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);color:var(--dm);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">&#9792; Female</button>
+          <button id="g-skip" onclick="setGender('')" style="flex:1;padding:10px;border-radius:var(--rs);border:.5px solid rgba(0,240,255,0.4);background:var(--cyd);color:var(--cy);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Skip</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Date of birth <span style="color:var(--ht);font-weight:400">(optional)</span></div>
+        <input class="inp" id="su-dob" type="date" style="color-scheme:dark">
+      </div>
+      <div class="err" id="su-err"></div>
+      <button class="btn-p" id="su-btn" onclick="doSignup()">CREATE ACCOUNT</button>
+      <button onclick="goTo('landing')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ OLD AUTH (kept for compat, hidden) ═══ -->
+<div id="s-auth" class="screen hidden" style="display:none"></div>
 <div id="s-home" class="screen hidden">
   <div class="safe-top" style="padding-bottom:12px">
     <div class="hdr">
@@ -314,8 +368,31 @@ const hav=(la1,lo1,la2,lo2)=>{const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)
 const calcCal=(sec,mode)=>Math.round((mode==="run"?10:8)*70*(sec/3600));
 function showToast(msg,good=false){const t=el("toast");t.textContent=msg;t.style.background=good?"rgba(0,240,255,0.15)":"rgba(255,34,85,0.15)";t.style.borderColor=good?"rgba(0,240,255,0.4)":"rgba(255,34,85,0.4)";t.style.color=good?"#00f0ff":"#ff2255";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3000);}
 let authMode="login";
-function switchTab(m){authMode=m;el("tab-login").classList.toggle("on",m==="login");el("tab-signup").classList.toggle("on",m==="signup");el("field-uname").style.display=m==="signup"?"block":"none";el("auth-btn").textContent=m==="login"?"LOGIN":"CREATE ACCOUNT";el("auth-err").textContent="";}
-async function submitAuth(){const email=el("inp-email").value.trim(),pass=el("inp-pass").value,uname=el("inp-uname").value.trim(),btn=el("auth-btn");el("auth-err").textContent="";if(!email||!pass){el("auth-err").textContent="Email and password required";return;}if(authMode==="signup"&&uname.length<3){el("auth-err").textContent="Username min 3 characters";return;}btn.disabled=true;btn.textContent="...";if(authMode==="login"){const{error}=await sb.auth.signInWithPassword({email,password:pass});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}}else{const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname}}});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}if(data.user&&!data.session){el("auth-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}}}
+let selectedGender="";
+function switchTab(m){authMode=m;el("tab-login").classList.toggle("on",m==="login");el("tab-signup").classList.toggle("on",m==="signup");const su=m==="signup";el("field-uname").style.display=su?"block":"none";el("field-gender").style.display=su?"block":"none";el("field-dob").style.display=su?"block":"none";el("auth-btn").textContent=su?"CREATE ACCOUNT":"LOGIN";el("auth-err").textContent="";}
+function setGender(g){selectedGender=g;["male","female","skip"].forEach(id=>{const btn=el("g-"+id);if(!btn)return;const active=(id===g)||(id==="skip"&&g==="");btn.style.background=active?"var(--cyd)":"var(--sf)";btn.style.borderColor=active?"rgba(0,240,255,0.4)":"var(--bd)";btn.style.color=active?"var(--cy)":"var(--dm)";});}
+async function submitAuth(){const email=el("inp-email").value.trim(),pass=el("inp-pass").value,uname=el("inp-uname").value.trim(),btn=el("auth-btn");el("auth-err").textContent="";if(!email||!pass){el("auth-err").textContent="Email and password required";return;}if(authMode==="signup"&&uname.length<3){el("auth-err").textContent="Username min 3 characters";return;}btn.disabled=true;btn.textContent="...";if(authMode==="login"){const{error}=await sb.auth.signInWithPassword({email,password:pass});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}}else{const dob=el("inp-dob")?.value||null;
+    const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob||null}}});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}if(data.user&&!data.session){el("auth-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}}}
+async function doLogin(){
+  const email=el("login-email").value.trim(),pass=el("login-pass").value;
+  el("login-err").textContent="";
+  if(!email||!pass){el("login-err").textContent="Email and password required";return;}
+  const btn=el("login-btn");btn.disabled=true;btn.textContent="...";
+  const{error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){el("login-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}
+}
+async function doSignup(){
+  const uname=el("su-uname").value.trim(),email=el("su-email").value.trim(),pass=el("su-pass").value;
+  const dob=el("su-dob").value||null;
+  el("su-err").textContent="";
+  if(!uname||uname.length<3){el("su-err").textContent="Username min 3 characters";return;}
+  if(!email||!pass){el("su-err").textContent="Email and password required";return;}
+  if(pass.length<6){el("su-err").textContent="Password min 6 characters";return;}
+  const btn=el("su-btn");btn.disabled=true;btn.textContent="...";
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob}}});
+  if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  if(data.user&&!data.session){el("su-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+}
 async function confirmSignOut(){if(!confirm("Sign out?"))return;stopGPS();stopPresence();stopRT();stopAnim();await sb.auth.signOut();}
 function startGPS(){if(!navigator.geolocation){gpsUI("no GPS",false);return;}A.gpsId=navigator.geolocation.watchPosition(p=>{A.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};A.gpsReady=p.coords.accuracy<60;gpsUI(p.coords.accuracy<20?"GPS locked":p.coords.accuracy<60?"GPS good":"GPS weak",A.gpsReady);if(A.sess?.on)onMove(A.pos.lat,A.pos.lng);if(A.marker&&A.map)A.marker.setLatLng([A.pos.lat,A.pos.lng]);},()=>gpsUI("GPS off",false),{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
 function stopGPS(){if(A.gpsId!==null){navigator.geolocation.clearWatch(A.gpsId);A.gpsId=null;}}
@@ -346,16 +423,17 @@ let _cf=null;
 function flashCap(n){const e=el("cflash");if(!e)return;e.textContent=`sector captured - ${n} this run`;e.classList.add("show");clearTimeout(_cf);_cf=setTimeout(()=>e.classList.remove("show"),2200);}
 async function buildSummary(){const s=A.sess;const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("sum-sec").textContent=`+${s.secs}`;el("sum-loc").textContent=`sectors - ${myCount} total owned`;el("sum-km").textContent=s.km.toFixed(2);el("sum-time").textContent=fmt(s.elapsed);el("sum-pace").textContent=pace(s.km,s.elapsed);el("sum-kcal").textContent=s.cal;el("sum-tot").textContent=myCount;try{const{data}=await sb.from("leaderboard").select("id").gte("total_sectors",myCount);el("sum-rank").textContent=`#${(data?.length||0)+1}`;}catch(_){el("sum-rank").textContent="#-";}if(myCount>=50)showAch("City Explorer","50+ sectors captured");else if((A.profile?.total_runs||0)>=5)showAch("Regular Runner","5 patrol sessions completed");else if(s.secs>=5)showAch("Sector Hunter","5+ sectors in one run");else el("ach").style.display="none";}
 function showAch(t,d){el("ach").style.display="flex";el("ach-t").textContent=t;el("ach-d").textContent=d;el("ach-ico").textContent="Trophy";}
-async function loadLB(){const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await sb.from("leaderboard").select("*").limit(30);if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${row.username}${isMe?" (you)":""}</div><div style="font-size:10px;color:var(--ht)">${row.total_runs||0} runs · ${parseFloat(row.total_km||0).toFixed(1)}km</div></div><div style="text-align:right"><div style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--ht)">sectors</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
+async function loadLB(){const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await sb.from("profiles").select("id,username,city,total_sectors,total_runs,total_km,gender,last_active").order("total_sectors",{ascending:false}).limit(30);if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;const gIcon=row.gender==="male"?'<span style="font-size:11px;color:#4a9eff;margin-left:4px">&#9794;</span>':row.gender==="female"?'<span style="font-size:11px;color:#ff6eb0;margin-left:4px">&#9792;</span>':"";
+      return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${row.username}${gIcon}${isMe?" (you)":""}</div><div style="font-size:10px;color:var(--ht)">${row.total_runs||0} runs · ${parseFloat(row.total_km||0).toFixed(1)}km</div></div><div style="text-align:right"><div style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--ht)">sectors</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
 async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("leaderboard").select("username,total_sectors").neq("id",A.user.id).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=`${data[0].total_sectors||0} sectors - #1 rival`;}}catch(_){}}
 function setMode(m){A.mode=m;el("btn-run").classList.toggle("on",m==="run");el("btn-cycle").classList.toggle("on",m==="cycle");const lbl=el("run-mode");if(lbl)lbl.textContent=m;}
-function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard",paywall:"s-paywall",auth:"s-auth",loading:"s-loading"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
+function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",loading:"s-loading"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
 function goHome(){stopAnim();goTo("home");}
 function showPaywall(){goTo("paywall");}
 function dismissPaywall(){goTo("home");}
 window.addEventListener("resize",()=>{szCvs();szCvsT();});
-sb.auth.onAuthStateChange(async(event,session)=>{if(session?.user){A.user=session.user;const{data}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(data)A.profile=data;await loadTerritory();startRT();startGPS();goTo("home");}else{A.user=null;A.profile=null;stopGPS();stopPresence();stopRT();stopAnim();goTo("auth");}});
-window.addEventListener("load",async()=>{setTimeout(async()=>{try{const{data:{session}}=await sb.auth.getSession();if(!session)goTo("auth");}catch(e){console.error("init error:",e);goTo("auth");}},2000);});
+sb.auth.onAuthStateChange(async(event,session)=>{if(session?.user){A.user=session.user;const{data}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(data)A.profile=data;await loadTerritory();startRT();startGPS();goTo("home");}else{A.user=null;A.profile=null;stopGPS();stopPresence();stopRT();stopAnim();goTo("landing");}});
+window.addEventListener("load",async()=>{setTimeout(async()=>{try{const{data:{session}}=await sb.auth.getSession();if(!session)goTo("landing");}catch(e){console.error("init error:",e);goTo("auth");}},2000);});
 </script>
 </body>
 </html>
