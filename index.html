@@ -484,21 +484,18 @@ async function doLogin(){
   el("login-err").textContent="";
   if(!email||!pass){el("login-err").textContent="Email and password required";return;}
   const btn=el("login-btn");btn.disabled=true;btn.textContent="Logging in...";
-  try {
+  try{
     const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
     if(error){el("login-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}
     A.user=data.user;
-    const{data:profile}=await sb.from("profiles").select("*").eq("id",A.user.id).single();
-    if(profile)A.profile=profile;
-    try{await loadTerritory();}catch(e){console.error("territory:",e);}
-    await setSessionKey();
-    startSessionWatch();
-    startRT();
-    startGPS();
+    try{const{data:p}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(p)A.profile=p;}catch(e){}
+    loadTerritory().catch(()=>{});
+    try{await setSessionKey();}catch(e){}
+    startSessionWatch();startRT();startGPS();
     btn.disabled=false;btn.textContent="LOGIN";
     goTo("home");
-  } catch(e){
-    el("login-err").textContent="Login failed. Check your connection.";
+  }catch(e){
+    el("login-err").textContent="Login failed. Try again.";
     btn.disabled=false;btn.textContent="LOGIN";
     console.error(e);
   }
@@ -510,17 +507,26 @@ async function doSignup(){
   if(!uname||uname.length<3){el("su-err").textContent="Username min 3 characters";return;}
   if(!email||!pass){el("su-err").textContent="Email and password required";return;}
   if(pass.length<6){el("su-err").textContent="Password min 6 characters";return;}
-  const btn=el("su-btn");btn.disabled=true;btn.textContent="...";
+  const btn=el("su-btn");btn.disabled=true;btn.textContent="Creating account...";
   const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob}}});
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
-  if(data.user&&!data.session){el("su-err").textContent="Check your email to confirm your account, then login.";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  // Email confirmation disabled → session exists, go straight to home
   if(data.session){
     A.user=data.user;
-    try{const{data:profile}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(profile)A.profile=profile;}catch(e){}
-    try{await loadTerritory();}catch(e){}
+    try{const{data:p}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(p)A.profile=p;}catch(e){}
+    loadTerritory().catch(()=>{});
     startRT();startGPS();
+    btn.disabled=false;btn.textContent="CREATE ACCOUNT";
     goTo("home");
+    return;
+  }
+  // Email confirmation still on → tell user to login after confirming
+  if(data.user&&!data.session){
+    el("su-err").style.color="var(--cy)";
+    el("su-err").textContent="Account created! Check your email, confirm it, then come back to login.";
+    btn.disabled=false;btn.textContent="CREATE ACCOUNT";
+    return;
   }
   btn.disabled=false;btn.textContent="CREATE ACCOUNT";
 }
@@ -575,9 +581,8 @@ window.addEventListener("load",async()=>{
       if(!session){goTo("landing");}
       else{
         A.user=session.user;
-        const{data:prof}=await sb.from("profiles").select("*").eq("id",A.user.id).single();
-        if(prof)A.profile=prof;
-        try{await loadTerritory();}catch(e){}
+        try{const{data:prof}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(prof)A.profile=prof;}catch(e){}
+        loadTerritory().catch(()=>{});
         startRT();startGPS();startSessionWatch();goTo("home");
       }
     }catch(e){console.error("init:",e);goTo("landing");}
