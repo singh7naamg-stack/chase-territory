@@ -1,1 +1,353 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>CHASE Territory</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#060609;--sf:rgba(255,255,255,0.05);--bd:rgba(255,255,255,0.08);--cy:#00f0ff;--cyd:rgba(0,240,255,0.15);--rd:#ff2255;--am:#ff9500;--tx:rgba(255,255,255,1);--dm:rgba(255,255,255,0.5);--ht:rgba(255,255,255,0.25);--r:16px;--rs:10px}
+body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflow:hidden;height:100vh;height:100dvh;width:100vw}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);transition:opacity .25s,transform .25s;z-index:1}
+.screen.hidden{opacity:0;pointer-events:none;transform:translateY(14px)}
+.screen.active{opacity:1;pointer-events:all;transform:translateY(0)}
+.safe-top{padding-top:max(44px,env(safe-area-inset-top))}
+.safe-bot{padding-bottom:max(20px,env(safe-area-inset-bottom))}
+.btn-p{width:100%;padding:17px;background:var(--cy);border:none;border-radius:var(--r);font-family:"Orbitron",sans-serif;font-size:14px;font-weight:700;letter-spacing:3px;color:#000;cursor:pointer;transition:transform .12s}
+.btn-p:active{transform:scale(.97)}
+.btn-p:disabled{opacity:.4;pointer-events:none}
+.btn-d{width:100%;padding:15px;background:rgba(255,34,85,0.12);border:.5px solid rgba(255,34,85,0.35);border-radius:var(--r);font-size:14px;font-weight:600;color:var(--rd);cursor:pointer;transition:transform .12s}
+.btn-d:active{transform:scale(.97)}
+.btn-g{background:var(--sf);border:.5px solid var(--bd);border-radius:var(--r);padding:13px;font-size:13px;font-weight:500;color:var(--tx);cursor:pointer;transition:transform .12s}
+.btn-g:active{transform:scale(.97)}
+.inp{width:100%;padding:14px 16px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);font-size:14px;color:var(--tx);font-family:"Inter",sans-serif;outline:none;transition:border .2s}
+.inp:focus{border-color:rgba(0,240,255,0.5)}
+.inp::placeholder{color:var(--ht)}
+.err{font-size:12px;color:var(--rd);text-align:center;min-height:16px}
+.bnav{display:flex;justify-content:space-around;align-items:center;padding:10px 0;padding-bottom:max(10px,env(safe-area-inset-bottom));border-top:.5px solid var(--bd);background:rgba(6,6,9,0.96)}
+.nb{display:flex;flex-direction:column;align-items:center;gap:3px;background:none;border:none;color:var(--ht);cursor:pointer;padding:4px 12px;font-size:10px;font-weight:500;transition:color .2s}
+.nb svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.5}
+.nb.on{color:var(--cy)}
+#s-loading{align-items:center;justify-content:center;gap:20px;z-index:100}
+.logo-mark{width:60px;height:52px;position:relative}
+.logo-mark::before{content:"";position:absolute;width:0;height:0;border-left:30px solid transparent;border-right:30px solid transparent;border-bottom:52px solid var(--cy);filter:drop-shadow(0 0 20px var(--cy))}
+.brand{font-family:"Orbitron",sans-serif;font-size:28px;font-weight:900;letter-spacing:6px;color:var(--cy)}
+.lbar{width:160px;height:2px;background:rgba(255,255,255,0.1);border-radius:2px;margin-top:32px;overflow:hidden}
+.lfill{height:100%;background:var(--cy);animation:lf 1.8s ease-out forwards}
+@keyframes lf{from{width:0}to{width:100%}}
+#s-auth{justify-content:center;overflow-y:auto}
+.auth-inner{max-width:360px;width:100%;margin:auto;padding:40px 24px}
+.auth-tabs{display:flex;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:4px;margin-bottom:20px}
+.atab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;transition:all .2s;color:var(--dm);background:none;border:none}
+.atab.on{background:var(--cy);color:#000}
+.auth-form{display:flex;flex-direction:column;gap:14px}
+.ilbl{font-size:12px;color:var(--dm);font-weight:500;margin-bottom:4px}
+#s-home{overflow-y:auto}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:0 20px 14px}
+.av{width:36px;height:36px;border-radius:50%;background:var(--cyd);border:1.5px solid rgba(0,240,255,0.3);display:flex;align-items:center;justify-content:center;font-family:"Orbitron",sans-serif;font-size:12px;font-weight:700;color:var(--cy)}
+.gc{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:20px;background:var(--sf);border:.5px solid var(--bd)}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.tc{background:rgba(0,240,255,0.06);border:.5px solid rgba(0,240,255,0.2);border-radius:var(--r);padding:16px}
+.tc-row{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.tc-big{font-family:"Orbitron",sans-serif;font-size:38px;font-weight:900;color:var(--cy);line-height:1}
+.srow{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sc{background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:12px;text-align:center}
+.sv{font-family:"Orbitron",sans-serif;font-size:18px;font-weight:700}
+.sl{font-size:9px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.mrow{display:flex;gap:10px}
+.mbtn{flex:1;padding:12px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:12px;font-weight:600;color:var(--dm);cursor:pointer;transition:all .2s}
+.mbtn.on{background:var(--cyd);border-color:rgba(0,240,255,0.4);color:var(--cy)}
+#s-run{z-index:2}
+.mwrap{flex:1;position:relative;min-height:0;overflow:hidden}
+#map,#map-t{width:100%;height:100%;min-height:200px}
+#cvs,#cvs-t{position:absolute;inset:0;pointer-events:none;z-index:500}
+.rpill{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(6,6,9,0.88);border:.5px solid var(--bd);border-radius:30px;padding:8px 20px;display:flex;gap:22px;z-index:600;pointer-events:none}
+.rv{font-family:"Orbitron",sans-serif;font-size:16px;font-weight:700;text-align:center}
+.rl{font-size:9px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;text-align:center}
+.cflash{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(0,240,255,0.12);border:.5px solid rgba(0,240,255,0.4);border-radius:30px;padding:8px 18px;font-size:12px;font-weight:600;color:var(--cy);pointer-events:none;z-index:700;opacity:0;transition:opacity .25s;white-space:nowrap}
+.cflash.show{opacity:1}
+.liveb{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--rd);letter-spacing:1px}
+.ldot{width:7px;height:7px;border-radius:50%;background:var(--rd);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+#s-summary{overflow-y:auto}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:0 20px;margin-bottom:12px}
+.sg{background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:12px;text-align:center}
+.sgv{font-family:"Orbitron",sans-serif;font-size:20px;font-weight:700}
+.sgl{font-size:9px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-top:3px}
+.ach{background:rgba(255,149,0,0.08);border:.5px solid rgba(255,149,0,0.25);border-radius:var(--r);padding:13px;display:flex;align-items:center;gap:12px;margin:0 20px 12px}
+#s-territory{z-index:1}
+.mleg{position:absolute;bottom:70px;left:50%;transform:translateX(-50%);background:rgba(6,6,9,0.88);border:.5px solid var(--bd);border-radius:20px;padding:7px 14px;display:flex;gap:14px;z-index:600;white-space:nowrap}
+.li{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dm)}
+.ld{width:8px;height:8px;border-radius:2px}
+.rvalert{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(255,34,85,0.12);border:.5px solid rgba(255,34,85,0.3);border-radius:20px;padding:7px 14px;font-size:11px;color:var(--rd);font-weight:600;z-index:600;white-space:nowrap;display:none}
+#s-leaderboard{overflow-y:auto}
+.lrow{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:.5px solid var(--bd)}
+.lrow.me{background:rgba(0,240,255,0.06)}
+.lrank{font-family:"Orbitron",sans-serif;font-size:14px;font-weight:700;color:var(--ht);min-width:28px}
+.lrank.top{color:var(--am)}
+.lav{width:34px;height:34px;border-radius:50%;background:var(--sf);border:.5px solid var(--bd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--dm);flex-shrink:0}
+.lav.me{background:var(--cyd);border-color:rgba(0,240,255,0.3);color:var(--cy)}
+#s-paywall{z-index:50;justify-content:flex-end;background:rgba(0,0,0,0.65)}
+.pwsh{background:#0d0d15;border-radius:24px 24px 0 0;padding:28px 24px;padding-bottom:max(28px,env(safe-area-inset-bottom))}
+.pwh{font-family:"Orbitron",sans-serif;font-size:20px;font-weight:900;text-align:center;margin-bottom:8px}
+.btnu{width:100%;padding:17px;background:var(--am);border:none;border-radius:var(--r);font-family:"Orbitron",sans-serif;font-size:14px;font-weight:700;letter-spacing:2px;color:#000;cursor:pointer;margin-bottom:10px;transition:transform .12s}
+.btnu:active{transform:scale(.97)}
+.toast{position:absolute;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(255,34,85,0.15);border:.5px solid rgba(255,34,85,0.4);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:600;color:var(--rd);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="s-loading" class="screen active">
+  <div class="logo-mark"></div>
+  <div class="brand">CHASE</div>
+  <div style="font-size:11px;color:var(--ht);letter-spacing:4px;margin-top:-8px">TERRITORY</div>
+  <div class="lbar"><div class="lfill"></div></div>
+</div>
+<div id="s-auth" class="screen hidden">
+  <div class="auth-inner">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-family:Orbitron,sans-serif;font-size:22px;font-weight:900;color:var(--cy);letter-spacing:4px">CHASE</div>
+      <div style="font-size:11px;color:var(--ht);letter-spacing:3px;margin-top:4px">TERRITORY</div>
+    </div>
+    <div class="auth-tabs">
+      <button class="atab on" id="tab-login" onclick="switchTab('login')">Login</button>
+      <button class="atab" id="tab-signup" onclick="switchTab('signup')">Sign up</button>
+    </div>
+    <div class="auth-form">
+      <div id="field-uname" style="display:none">
+        <div class="ilbl">Username</div>
+        <input class="inp" id="inp-uname" type="text" placeholder="YourRunnerName" maxlength="20">
+      </div>
+      <div>
+        <div class="ilbl">Email</div>
+        <input class="inp" id="inp-email" type="email" placeholder="you@example.com">
+      </div>
+      <div>
+        <div class="ilbl">Password</div>
+        <input class="inp" id="inp-pass" type="password" placeholder="password">
+      </div>
+      <div class="err" id="auth-err"></div>
+      <button class="btn-p" id="auth-btn" onclick="submitAuth()">LOGIN</button>
+    </div>
+  </div>
+</div>
+<div id="s-home" class="screen hidden">
+  <div class="safe-top" style="padding-bottom:12px">
+    <div class="hdr">
+      <div>
+        <div style="font-size:11px;color:var(--ht);text-transform:uppercase;letter-spacing:2px" id="greet">good morning</div>
+        <div style="font-size:20px;font-weight:700" id="uname">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="gc"><div class="dot" id="gps-dot" style="background:#888"></div><span id="gps-txt">locating...</span></div>
+        <div class="av" id="av-letter">?</div>
+      </div>
+    </div>
+    <div style="padding:0 20px;display:flex;flex-direction:column;gap:13px">
+      <div class="tc">
+        <div class="tc-row">
+          <div>
+            <div class="tc-big" id="h-sec">0</div>
+            <div style="font-size:11px;color:var(--dm);margin-top:2px">sectors controlled</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;font-weight:700;color:var(--rd)" id="rv-name">—</div>
+            <div style="font-size:10px;color:var(--ht)" id="rv-info">city leaderboard</div>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--ht);margin-bottom:5px"><span>daily goal</span><span id="g-txt">0 / 10</span></div>
+        <div style="height:3px;background:rgba(255,255,255,0.08);border-radius:2px"><div id="g-bar" style="height:100%;background:var(--cy);border-radius:2px;transition:width .5s;width:0%"></div></div>
+      </div>
+      <div class="srow">
+        <div class="sc"><div class="sv" id="h-runs">0</div><div class="sl">runs</div></div>
+        <div class="sc"><div class="sv" id="h-km">0.0</div><div class="sl">total km</div></div>
+        <div class="sc"><div class="sv" id="h-kcal">0</div><div class="sl">kcal</div></div>
+      </div>
+      <div class="mrow">
+        <button class="mbtn on" id="btn-run" onclick="setMode('run')">Run patrol</button>
+        <button class="mbtn" id="btn-cycle" onclick="setMode('cycle')">Cycle intercept</button>
+      </div>
+      <button class="btn-p" onclick="startRun()">START RUN</button>
+    </div>
+  </div>
+  <div class="bnav">
+    <button class="nb on" onclick="goTo('home')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
+    <button class="nb" onclick="goTo('territory')"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Territory</button>
+    <button class="nb" onclick="goTo('leaderboard')"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Ranks</button>
+    <button class="nb" onclick="confirmSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </div>
+</div>
+<div id="s-run" class="screen hidden">
+  <div class="safe-top" style="padding-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+      <div class="liveb"><div class="ldot"></div>LIVE</div>
+      <div style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700" id="run-timer">00:00:00</div>
+      <div style="font-size:11px;color:var(--dm)" id="run-mode">run</div>
+    </div>
+  </div>
+  <div class="mwrap">
+    <div id="map"></div>
+    <canvas id="cvs"></canvas>
+    <div class="rpill">
+      <div><div class="rv" id="run-dist">0.00</div><div class="rl">km</div></div>
+      <div><div class="rv" id="run-pace">--"--</div><div class="rl">pace</div></div>
+      <div><div class="rv" id="run-secs">0</div><div class="rl">sectors</div></div>
+    </div>
+    <div class="cflash" id="cflash">sector captured</div>
+  </div>
+  <div style="padding:0 20px;display:flex;flex-direction:column;gap:8px" class="safe-bot" style="padding-top:10px">
+    <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--ht)">calories</span><span style="font-size:11px;font-weight:600" id="run-kcal">0 kcal</span></div>
+    <button class="btn-d" onclick="endRun()">End run</button>
+  </div>
+</div>
+<div id="s-summary" class="screen hidden">
+  <div class="safe-top"></div>
+  <div style="flex:1;overflow-y:auto">
+    <div style="text-align:center;padding:20px 20px 14px">
+      <div style="font-size:11px;color:var(--ht);text-transform:uppercase;letter-spacing:3px;margin-bottom:8px">run complete</div>
+      <div style="font-family:Orbitron,sans-serif;font-size:46px;font-weight:900;color:var(--cy);line-height:1" id="sum-sec">+0</div>
+      <div style="font-size:12px;color:var(--dm);margin-top:6px" id="sum-loc">sectors captured</div>
+    </div>
+    <div class="sgrid">
+      <div class="sg"><div class="sgv" id="sum-km">0.00</div><div class="sgl">km</div></div>
+      <div class="sg"><div class="sgv" id="sum-time">0:00</div><div class="sgl">time</div></div>
+      <div class="sg"><div class="sgv" id="sum-pace">--</div><div class="sgl">pace</div></div>
+    </div>
+    <div class="sgrid">
+      <div class="sg"><div class="sgv" id="sum-kcal">0</div><div class="sgl">kcal</div></div>
+      <div class="sg"><div class="sgv" id="sum-tot">0</div><div class="sgl">total owned</div></div>
+      <div class="sg"><div class="sgv" id="sum-rank">#-</div><div class="sgl">city rank</div></div>
+    </div>
+    <div class="ach" id="ach" style="display:none">
+      <div style="font-size:26px;flex-shrink:0" id="ach-ico">trophy</div>
+      <div><div style="font-size:12px;font-weight:700;color:var(--am);margin-bottom:2px" id="ach-t">Achievement</div><div style="font-size:11px;color:var(--dm)" id="ach-d"></div></div>
+    </div>
+    <div style="display:flex;gap:10px;padding:0 20px;margin-bottom:10px">
+      <button class="btn-g" style="flex:1" onclick="showPaywall()">Share map</button>
+      <button class="btn-g" style="flex:1" onclick="goTo('territory')">View territory</button>
+    </div>
+    <div style="padding:0 20px 28px"><button class="btn-p" onclick="goHome()">DONE</button></div>
+  </div>
+</div>
+<div id="s-territory" class="screen hidden">
+  <div class="safe-top" style="padding-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+      <button onclick="goHome()" style="background:none;border:none;color:var(--dm);font-size:13px;cursor:pointer">back</button>
+      <div style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700">Territory</div>
+      <div style="font-size:11px;color:var(--cy)" id="t-count">0 sectors</div>
+    </div>
+  </div>
+  <div class="mwrap">
+    <div id="map-t"></div>
+    <canvas id="cvs-t"></canvas>
+    <div class="rvalert" id="rv-alert"></div>
+    <div class="mleg">
+      <div class="li"><div class="ld" style="background:rgba(0,240,255,0.6)"></div>yours</div>
+      <div class="li"><div class="ld" style="background:rgba(255,34,85,0.6)"></div>rivals</div>
+      <div class="li"><div class="ld" style="background:rgba(255,255,255,0.1)"></div>unclaimed</div>
+    </div>
+  </div>
+  <div class="bnav">
+    <button class="nb" onclick="goHome()"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
+    <button class="nb on"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Territory</button>
+    <button class="nb" onclick="goTo('leaderboard')"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Ranks</button>
+    <button class="nb" onclick="confirmSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </div>
+</div>
+<div id="s-leaderboard" class="screen hidden">
+  <div class="safe-top" style="padding-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+      <button onclick="goHome()" style="background:none;border:none;color:var(--dm);font-size:13px;cursor:pointer">back</button>
+      <div style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700">City ranks</div>
+      <button onclick="loadLB()" style="background:none;border:none;color:var(--cy);font-size:12px;cursor:pointer">refresh</button>
+    </div>
+  </div>
+  <div style="flex:1;overflow-y:auto" id="lb-list"><div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div></div>
+  <div class="bnav">
+    <button class="nb" onclick="goHome()"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
+    <button class="nb" onclick="goTo('territory')"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Territory</button>
+    <button class="nb on"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Ranks</button>
+    <button class="nb" onclick="confirmSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+  </div>
+</div>
+<div id="s-paywall" class="screen hidden">
+  <div style="flex:1" onclick="dismissPaywall()"></div>
+  <div class="pwsh">
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,149,0,0.15);border:1.5px solid rgba(255,149,0,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 14px;font-size:24px">shield</div>
+    <div class="pwh">Territory Pro</div>
+    <div style="font-size:13px;color:var(--dm);text-align:center;line-height:1.6;margin-bottom:16px">Upgrade to defend your territory and battle rivals across any city.</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><div style="width:28px;height:28px;border-radius:8px;background:rgba(0,240,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">sword</div>Territory defense — sectors persist forever</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><div style="width:28px;height:28px;border-radius:8px;background:rgba(0,240,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">group</div>5 active rivals + squad battles</div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:13px"><div style="width:28px;height:28px;border-radius:8px;background:rgba(0,240,255,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0">globe</div>Capture territory in any city worldwide</div>
+    </div>
+    <button class="btnu" onclick="dismissPaywall()">UPGRADE - $4.99 / MONTH</button>
+    <button style="width:100%;padding:11px;background:none;border:none;font-size:13px;color:var(--ht);cursor:pointer" onclick="dismissPaywall()">not now</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+// CONFIG - REPLACE THESE TWO LINES
+const SUPA_URL = "https://oyrltlyjyshkrszhrsyz.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im95cmx0bHlqeXNoa3Jzemhyc3l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2MDU1NjEsImV4cCI6MjA5NDE4MTU2MX0.zFW1XFh2YkSKm20h5p4A9A6ny64MOjxszudSFGWFBl8";
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+const A={mode:"run",user:null,profile:null,gpsId:null,gpsReady:false,pos:{lat:24.4969,lng:54.4036,acc:999},sess:null,allTerritory:{},map:null,mapT:null,cvs:null,cvsT:null,ctx:null,ctxT:null,marker:null,route:null,otherMarkers:{},raf:null,presenceCh:null,territoryCh:null,daily:0,dailyDate:""};
+const el=id=>document.getElementById(id);
+const SZ=0.0004;
+const hid=(lat,lng)=>`${Math.floor(lat/SZ)}:${Math.floor(lng/SZ)}`;
+const hctr=id=>{const[r,c]=id.split(":").map(Number);return{lat:(r+.5)*SZ,lng:(c+.5)*SZ}};
+const fmt=s=>`${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
+const pace=(km,sec)=>{if(km<.05)return"--";const m=Math.floor((sec/60)/km),s=Math.round(((sec/60)/km-m)*60);return`${m}'${String(s).padStart(2,"0")}"`;};
+const hav=(la1,lo1,la2,lo2)=>{const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));};
+const calcCal=(sec,mode)=>Math.round((mode==="run"?10:8)*70*(sec/3600));
+function showToast(msg,good=false){const t=el("toast");t.textContent=msg;t.style.background=good?"rgba(0,240,255,0.15)":"rgba(255,34,85,0.15)";t.style.borderColor=good?"rgba(0,240,255,0.4)":"rgba(255,34,85,0.4)";t.style.color=good?"#00f0ff":"#ff2255";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3000);}
+let authMode="login";
+function switchTab(m){authMode=m;el("tab-login").classList.toggle("on",m==="login");el("tab-signup").classList.toggle("on",m==="signup");el("field-uname").style.display=m==="signup"?"block":"none";el("auth-btn").textContent=m==="login"?"LOGIN":"CREATE ACCOUNT";el("auth-err").textContent="";}
+async function submitAuth(){const email=el("inp-email").value.trim(),pass=el("inp-pass").value,uname=el("inp-uname").value.trim(),btn=el("auth-btn");el("auth-err").textContent="";if(!email||!pass){el("auth-err").textContent="Email and password required";return;}if(authMode==="signup"&&uname.length<3){el("auth-err").textContent="Username min 3 characters";return;}btn.disabled=true;btn.textContent="...";if(authMode==="login"){const{error}=await sb.auth.signInWithPassword({email,password:pass});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}}else{const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname}}});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}if(data.user&&!data.session){el("auth-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}}}
+async function confirmSignOut(){if(!confirm("Sign out?"))return;stopGPS();stopPresence();stopRT();stopAnim();await sb.auth.signOut();}
+function startGPS(){if(!navigator.geolocation){gpsUI("no GPS",false);return;}A.gpsId=navigator.geolocation.watchPosition(p=>{A.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};A.gpsReady=p.coords.accuracy<60;gpsUI(p.coords.accuracy<20?"GPS locked":p.coords.accuracy<60?"GPS good":"GPS weak",A.gpsReady);if(A.sess?.on)onMove(A.pos.lat,A.pos.lng);if(A.marker&&A.map)A.marker.setLatLng([A.pos.lat,A.pos.lng]);},()=>gpsUI("GPS off",false),{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
+function stopGPS(){if(A.gpsId!==null){navigator.geolocation.clearWatch(A.gpsId);A.gpsId=null;}}
+function gpsUI(txt,ok){const d=el("gps-dot"),t=el("gps-txt");if(d)d.style.background=ok?"#00ff88":"#ff9500";if(t)t.textContent=txt;}
+async function loadTerritory(){const{data}=await sb.from("territory").select("hex_id,user_id,username").eq("city","Abu Dhabi");if(data){A.allTerritory={};data.forEach(r=>{A.allTerritory[r.hex_id]={user_id:r.user_id,username:r.username};});}}
+async function captureHex(lat,lng){if(!A.user||!A.profile)return false;const id=hid(lat,lng),existing=A.allTerritory[id];if(existing?.user_id===A.user.id)return false;const{error}=await sb.from("territory").upsert({hex_id:id,user_id:A.user.id,username:A.profile.username,city:"Abu Dhabi",captured_at:new Date().toISOString()},{onConflict:"hex_id"});if(!error){A.allTerritory[id]={user_id:A.user.id,username:A.profile.username};A.sess.secs++;A.daily++;flashCap(A.sess.secs);return true;}return false;}
+function startRT(){A.territoryCh=sb.channel("territory_changes").on("postgres_changes",{event:"*",schema:"public",table:"territory"},payload=>{const row=payload.new;if(!row)return;const prev=A.allTerritory[row.hex_id];A.allTerritory[row.hex_id]={user_id:row.user_id,username:row.username};if(prev?.user_id===A.user?.id&&row.user_id!==A.user?.id)showToast(`${row.username} took your sector!`);}).subscribe();}
+function stopRT(){if(A.territoryCh){sb.removeChannel(A.territoryCh);A.territoryCh=null;}}
+let _pi=null;
+function startPresence(){if(!A.user||!A.profile)return;A.presenceCh=sb.channel("runners",{config:{presence:{key:A.user.id}}}).on("presence",{event:"sync"},()=>{const state=A.presenceCh.presenceState();updateRunners(state);}).subscribe(async s=>{if(s==="SUBSCRIBED")bcast();});clearInterval(_pi);_pi=setInterval(()=>{if(A.sess?.on)bcast();},4000);}
+function bcast(){if(!A.presenceCh||!A.profile)return;A.presenceCh.track({user_id:A.user.id,username:A.profile.username,lat:A.pos.lat,lng:A.pos.lng,running:A.sess?.on||false});}
+function updateRunners(state){if(!A.map)return;Object.entries(state).forEach(([key,prs])=>{const p=prs[0];if(!p||p.user_id===A.user?.id)return;const col=p.running?"#ff2255":"#ff660088";if(A.otherMarkers[p.user_id]){A.otherMarkers[p.user_id].setLatLng([p.lat,p.lng]);}else{const ico=L.divIcon({className:"",html:`<div title="${p.username}" style="width:12px;height:12px;border-radius:50%;background:${col};border:2px solid white"></div>`,iconSize:[12,12],iconAnchor:[6,6]});A.otherMarkers[p.user_id]=L.marker([p.lat,p.lng],{icon:ico}).addTo(A.map);}});const active=new Set(Object.keys(state));Object.keys(A.otherMarkers).forEach(uid=>{if(!active.has(uid)){if(A.map)A.map.removeLayer(A.otherMarkers[uid]);delete A.otherMarkers[uid];}});}
+function stopPresence(){clearInterval(_pi);if(A.presenceCh){sb.removeChannel(A.presenceCh);A.presenceCh=null;}}
+function startRun(){A.sess={on:true,t0:Date.now(),elapsed:0,km:0,plat:A.pos.lat,plng:A.pos.lng,secs:0,cal:0,positions:[[A.pos.lat,A.pos.lng]]};goTo("run");startTick();setTimeout(()=>{try{buildRunMap();}catch(e){console.error(e);}captureHex(A.pos.lat,A.pos.lng);},300);}
+let _tick=null;
+function startTick(){clearInterval(_tick);_tick=setInterval(()=>{if(!A.sess?.on){clearInterval(_tick);return;}A.sess.elapsed=Math.floor((Date.now()-A.sess.t0)/1000);A.sess.cal=calcCal(A.sess.elapsed,A.mode);el("run-timer").textContent=fmt(A.sess.elapsed);el("run-kcal").textContent=`${A.sess.cal} kcal`;},1000);}
+function onMove(lat,lng){const d=hav(A.sess.plat,A.sess.plng,lat,lng);if(d<0.15){A.sess.km+=d;A.sess.plat=lat;A.sess.plng=lng;A.sess.positions.push([lat,lng]);if(A.route&&A.map)A.route.setLatLngs(A.sess.positions);if(A.marker&&A.map){A.marker.setLatLng([lat,lng]);A.map.panTo([lat,lng],{animate:true,duration:.5});}captureHex(lat,lng);el("run-dist").textContent=A.sess.km.toFixed(2);el("run-pace").textContent=pace(A.sess.km,A.sess.elapsed);el("run-secs").textContent=A.sess.secs;}}
+async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});const myCount=Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;await sb.from("profiles").update({total_sectors:myCount,total_km:parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3)),total_runs:(A.profile.total_runs||0)+1,total_cal:(A.profile.total_cal||0)+A.sess.cal,last_active:new Date().toISOString()}).eq("id",A.user.id);if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
+function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:"#00f0ff",weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
+function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
+function szCvs(){if(!A.cvs||!A.map)return;const c=A.map.getContainer();A.cvs.width=c.clientWidth;A.cvs.height=c.clientHeight;}
+function szCvsT(){if(!A.cvsT||!A.mapT)return;const c=A.mapT.getContainer();A.cvsT.width=c.clientWidth;A.cvsT.height=c.clientHeight;}
+function hexDraw(ctx,cx,cy,r,fill,stroke){ctx.beginPath();for(let i=0;i<6;i++){const a=(Math.PI/3)*i-Math.PI/6;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}
+function drawH(ctx,cvs,map,withAll){if(!ctx||!cvs||!map)return;ctx.clearRect(0,0,cvs.width,cvs.height);const b=map.getBounds(),pad=SZ*4,z=map.getZoom(),px=Math.max(5,(z-11)*3.5),uid=A.user?.id;Object.entries(A.allTerritory).forEach(([id,info])=>{const c=hctr(id);if(c.lat<b.getSouth()-pad||c.lat>b.getNorth()+pad)return;if(c.lng<b.getWest()-pad||c.lng>b.getEast()+pad)return;const p=map.latLngToContainerPoint([c.lat,c.lng]);if(info.user_id===uid){hexDraw(ctx,p.x,p.y,px,"rgba(0,240,255,0.22)","rgba(0,240,255,0.75)");}else if(withAll){hexDraw(ctx,p.x,p.y,px,"rgba(255,34,85,0.18)","rgba(255,34,85,0.6)");}});}
+function runAnim(){const loop=()=>{if(A.sess?.on&&A.map)drawH(A.ctx,A.cvs,A.map,false);A.raf=requestAnimationFrame(loop);};loop();}
+function stopAnim(){if(A.raf){cancelAnimationFrame(A.raf);A.raf=null;}}
+let _cf=null;
+function flashCap(n){const e=el("cflash");if(!e)return;e.textContent=`sector captured - ${n} this run`;e.classList.add("show");clearTimeout(_cf);_cf=setTimeout(()=>e.classList.remove("show"),2200);}
+async function buildSummary(){const s=A.sess;const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("sum-sec").textContent=`+${s.secs}`;el("sum-loc").textContent=`sectors - ${myCount} total owned`;el("sum-km").textContent=s.km.toFixed(2);el("sum-time").textContent=fmt(s.elapsed);el("sum-pace").textContent=pace(s.km,s.elapsed);el("sum-kcal").textContent=s.cal;el("sum-tot").textContent=myCount;try{const{data}=await sb.from("leaderboard").select("id").gte("total_sectors",myCount);el("sum-rank").textContent=`#${(data?.length||0)+1}`;}catch(_){el("sum-rank").textContent="#-";}if(myCount>=50)showAch("City Explorer","50+ sectors captured");else if((A.profile?.total_runs||0)>=5)showAch("Regular Runner","5 patrol sessions completed");else if(s.secs>=5)showAch("Sector Hunter","5+ sectors in one run");else el("ach").style.display="none";}
+function showAch(t,d){el("ach").style.display="flex";el("ach-t").textContent=t;el("ach-d").textContent=d;el("ach-ico").textContent="Trophy";}
+async function loadLB(){const list=el("lb-list");list.innerHTML="<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>";try{const{data}=await sb.from("leaderboard").select("*").limit(30);if(!data||!data.length){list.innerHTML="<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>";return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${row.username}${isMe?" (you)":""}</div><div style="font-size:10px;color:var(--ht)">${row.total_runs||0} runs · ${parseFloat(row.total_km||0).toFixed(1)}km</div></div><div style="text-align:right"><div style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--ht)">sectors</div></div></div>`;}).join("");}catch(e){list.innerHTML="<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>";}}
+async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("leaderboard").select("username,total_sectors").neq("id",A.user.id).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=`${data[0].total_sectors||0} sectors - #1 rival`;}}catch(_){}}
+function setMode(m){A.mode=m;el("btn-run").classList.toggle("on",m==="run");el("btn-cycle").classList.toggle("on",m==="cycle");const lbl=el("run-mode");if(lbl)lbl.textContent=m;}
+function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard",paywall:"s-paywall",auth:"s-auth",loading:"s-loading"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
+function goHome(){stopAnim();goTo("home");}
+function showPaywall(){goTo("paywall");}
+function dismissPaywall(){goTo("home");}
+window.addEventListener("resize",()=>{szCvs();szCvsT();});
+sb.auth.onAuthStateChange(async(event,session)=>{if(session?.user){A.user=session.user;const{data}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(data)A.profile=data;await loadTerritory();startRT();startGPS();goTo("home");}else{A.user=null;A.profile=null;stopGPS();stopPresence();stopRT();stopAnim();goTo("auth");}});
+window.addEventListener("load",async()=>{setTimeout(async()=>{const{data:{session}}=await sb.auth.getSession();if(!session)goTo("auth");},2000);});
+</script>
+</body>
+</html>
