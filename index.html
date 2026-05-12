@@ -148,7 +148,10 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
       </div>
       <div class="err" id="login-err"></div>
       <button class="btn-p" id="login-btn" onclick="doLogin()">LOGIN</button>
-      <button onclick="goTo('landing')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back</button>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <button onclick="goTo('landing')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back</button>
+        <button onclick="goTo('forgot')" style="background:none;border:none;color:var(--cy);font-size:13px;cursor:pointer;padding:8px;opacity:.8">Forgot password?</button>
+      </div>
     </div>
   </div>
 </div>
@@ -188,6 +191,47 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
       <div class="err" id="su-err"></div>
       <button class="btn-p" id="su-btn" onclick="doSignup()">CREATE ACCOUNT</button>
       <button onclick="goTo('landing')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FORGOT PASSWORD ═══ -->
+<div id="s-forgot" class="screen hidden" style="justify-content:center">
+  <div style="max-width:380px;width:100%;margin:auto;padding:0 24px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:Orbitron,monospace;font-size:22px;font-weight:900;color:var(--cy);letter-spacing:3px">Reset password</div>
+      <div style="font-size:13px;color:var(--ht);margin-top:8px;line-height:1.6">Enter your email and we will send you a reset link</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Email</div>
+        <input class="inp" id="forgot-email" type="email" placeholder="you@example.com">
+      </div>
+      <div class="err" id="forgot-err" style="color:var(--cy)"></div>
+      <button class="btn-p" id="forgot-btn" onclick="doForgotPassword()">SEND RESET LINK</button>
+      <button onclick="goTo('login')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back to login</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RESET PASSWORD (after clicking email link) ═══ -->
+<div id="s-reset" class="screen hidden" style="justify-content:center">
+  <div style="max-width:380px;width:100%;margin:auto;padding:0 24px">
+    <div style="text-align:center;margin-bottom:32px">
+      <div style="font-family:Orbitron,monospace;font-size:22px;font-weight:900;color:var(--cy);letter-spacing:3px">New password</div>
+      <div style="font-size:13px;color:var(--ht);margin-top:8px">Choose a new password for your account</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">New password</div>
+        <input class="inp" id="reset-pass" type="password" placeholder="min 6 characters">
+      </div>
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Confirm password</div>
+        <input class="inp" id="reset-pass2" type="password" placeholder="repeat password">
+      </div>
+      <div class="err" id="reset-err"></div>
+      <button class="btn-p" id="reset-btn" onclick="doResetPassword()">SET NEW PASSWORD</button>
     </div>
   </div>
 </div>
@@ -373,13 +417,85 @@ function switchTab(m){authMode=m;el("tab-login").classList.toggle("on",m==="logi
 function setGender(g){selectedGender=g;["male","female","skip"].forEach(id=>{const btn=el("g-"+id);if(!btn)return;const active=(id===g)||(id==="skip"&&g==="");btn.style.background=active?"var(--cyd)":"var(--sf)";btn.style.borderColor=active?"rgba(0,240,255,0.4)":"var(--bd)";btn.style.color=active?"var(--cy)":"var(--dm)";});}
 async function submitAuth(){const email=el("inp-email").value.trim(),pass=el("inp-pass").value,uname=el("inp-uname").value.trim(),btn=el("auth-btn");el("auth-err").textContent="";if(!email||!pass){el("auth-err").textContent="Email and password required";return;}if(authMode==="signup"&&uname.length<3){el("auth-err").textContent="Username min 3 characters";return;}btn.disabled=true;btn.textContent="...";if(authMode==="login"){const{error}=await sb.auth.signInWithPassword({email,password:pass});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}}else{const dob=el("inp-dob")?.value||null;
     const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob||null}}});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}if(data.user&&!data.session){el("auth-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}}}
+
+let _sessionWatch=null;
+const SESSION_KEY="chase_sk";
+
+function startSessionWatch(){
+  clearInterval(_sessionWatch);
+  if(!A.user)return;
+  _sessionWatch=setInterval(async()=>{
+    if(!A.user)return;
+    try{
+      const{data}=await sb.from("profiles").select("session_key").eq("id",A.user.id).single();
+      const local=localStorage.getItem(SESSION_KEY);
+      if(data&&data.session_key&&local&&data.session_key!==local){
+        clearInterval(_sessionWatch);
+        alert("Your account was logged in on another device. You have been signed out.");
+        await sb.auth.signOut();
+        goTo("landing");
+      }
+    }catch(e){}
+  },15000);
+}
+
+async function setSessionKey(){
+  if(!A.user)return;
+  const key=Math.random().toString(36).slice(2)+Date.now().toString(36);
+  localStorage.setItem(SESSION_KEY,key);
+  try{await sb.from("profiles").update({session_key:key}).eq("id",A.user.id);}catch(e){}
+}
+
+async function doForgotPassword(){
+  const email=el("forgot-email").value.trim();
+  const errEl=el("forgot-err");
+  errEl.style.color="var(--rd)";
+  errEl.textContent="";
+  if(!email){errEl.textContent="Enter your email";return;}
+  const btn=el("forgot-btn");btn.disabled=true;btn.textContent="Sending...";
+  const{error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:window.location.origin});
+  btn.disabled=false;btn.textContent="SEND RESET LINK";
+  if(error){errEl.textContent=error.message;return;}
+  errEl.style.color="var(--cy)";
+  errEl.textContent="Reset link sent! Check your email inbox.";
+}
+
+async function doResetPassword(){
+  const p1=el("reset-pass").value,p2=el("reset-pass2").value;
+  el("reset-err").textContent="";
+  if(!p1||p1.length<6){el("reset-err").textContent="Password min 6 characters";return;}
+  if(p1!==p2){el("reset-err").textContent="Passwords do not match";return;}
+  const btn=el("reset-btn");btn.disabled=true;btn.textContent="Saving...";
+  const{error}=await sb.auth.updateUser({password:p1});
+  btn.disabled=false;btn.textContent="SET NEW PASSWORD";
+  if(error){el("reset-err").textContent=error.message;return;}
+  goTo("login");
+  setTimeout(()=>showToast("Password updated! Please log in.",true),300);
+}
+
 async function doLogin(){
   const email=el("login-email").value.trim(),pass=el("login-pass").value;
   el("login-err").textContent="";
   if(!email||!pass){el("login-err").textContent="Email and password required";return;}
-  const btn=el("login-btn");btn.disabled=true;btn.textContent="...";
-  const{error}=await sb.auth.signInWithPassword({email,password:pass});
-  if(error){el("login-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}
+  const btn=el("login-btn");btn.disabled=true;btn.textContent="Logging in...";
+  try {
+    const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){el("login-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}
+    A.user=data.user;
+    const{data:profile}=await sb.from("profiles").select("*").eq("id",A.user.id).single();
+    if(profile)A.profile=profile;
+    try{await loadTerritory();}catch(e){console.error("territory:",e);}
+    await setSessionKey();
+    startSessionWatch();
+    startRT();
+    startGPS();
+    btn.disabled=false;btn.textContent="LOGIN";
+    goTo("home");
+  } catch(e){
+    el("login-err").textContent="Login failed. Check your connection.";
+    btn.disabled=false;btn.textContent="LOGIN";
+    console.error(e);
+  }
 }
 async function doSignup(){
   const uname=el("su-uname").value.trim(),email=el("su-email").value.trim(),pass=el("su-pass").value;
@@ -391,9 +507,18 @@ async function doSignup(){
   const btn=el("su-btn");btn.disabled=true;btn.textContent="...";
   const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob}}});
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
-  if(data.user&&!data.session){el("su-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  if(data.user&&!data.session){el("su-err").textContent="Check your email to confirm your account, then login.";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  if(data.session){
+    A.user=data.user;
+    try{const{data:profile}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(profile)A.profile=profile;}catch(e){}
+    try{await loadTerritory();}catch(e){}
+    startRT();startGPS();
+    goTo("home");
+  }
+  btn.disabled=false;btn.textContent="CREATE ACCOUNT";
 }
-async function confirmSignOut(){if(!confirm("Sign out?"))return;stopGPS();stopPresence();stopRT();stopAnim();await sb.auth.signOut();}
+async function confirmSignOut(){if(!confirm("Sign out?"))return;stopGPS();stopPresence();stopRT();stopAnim();clearInterval(_sessionWatch);localStorage.removeItem(SESSION_KEY);await sb.auth.signOut();}
 function startGPS(){if(!navigator.geolocation){gpsUI("no GPS",false);return;}A.gpsId=navigator.geolocation.watchPosition(p=>{A.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};A.gpsReady=p.coords.accuracy<60;gpsUI(p.coords.accuracy<20?"GPS locked":p.coords.accuracy<60?"GPS good":"GPS weak",A.gpsReady);if(A.sess?.on)onMove(A.pos.lat,A.pos.lng);if(A.marker&&A.map)A.marker.setLatLng([A.pos.lat,A.pos.lng]);},()=>gpsUI("GPS off",false),{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
 function stopGPS(){if(A.gpsId!==null){navigator.geolocation.clearWatch(A.gpsId);A.gpsId=null;}}
 function gpsUI(txt,ok){const d=el("gps-dot"),t=el("gps-txt");if(d)d.style.background=ok?"#00ff88":"#ff9500";if(t)t.textContent=txt;}
@@ -427,13 +552,31 @@ async function loadLB(){const list=el("lb-list");list.innerHTML='<div style="tex
       return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${row.username}${gIcon}${isMe?" (you)":""}</div><div style="font-size:10px;color:var(--ht)">${row.total_runs||0} runs · ${parseFloat(row.total_km||0).toFixed(1)}km</div></div><div style="text-align:right"><div style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--ht)">sectors</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
 async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("leaderboard").select("username,total_sectors").neq("id",A.user.id).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=`${data[0].total_sectors||0} sectors - #1 rival`;}}catch(_){}}
 function setMode(m){A.mode=m;el("btn-run").classList.toggle("on",m==="run");el("btn-cycle").classList.toggle("on",m==="cycle");const lbl=el("run-mode");if(lbl)lbl.textContent=m;}
-function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",loading:"s-loading"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
+function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",forgot:"s-forgot",reset:"s-reset",loading:"s-loading"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
 function goHome(){stopAnim();goTo("home");}
 function showPaywall(){goTo("paywall");}
 function dismissPaywall(){goTo("home");}
 window.addEventListener("resize",()=>{szCvs();szCvsT();});
-sb.auth.onAuthStateChange(async(event,session)=>{if(session?.user){A.user=session.user;const{data}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(data)A.profile=data;await loadTerritory();startRT();startGPS();goTo("home");}else{A.user=null;A.profile=null;stopGPS();stopPresence();stopRT();stopAnim();goTo("landing");}});
-window.addEventListener("load",async()=>{setTimeout(async()=>{try{const{data:{session}}=await sb.auth.getSession();if(!session)goTo("landing");}catch(e){console.error("init error:",e);goTo("auth");}},2000);});
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(event==="SIGNED_OUT"){A.user=null;A.profile=null;stopGPS();stopPresence();stopRT();stopAnim();goTo("landing");}
+});
+window.addEventListener("load",async()=>{
+  const hash=window.location.hash;
+  if(hash.includes("type=recovery")){setTimeout(()=>goTo("reset"),2200);return;}
+  setTimeout(async()=>{
+    try{
+      const{data:{session}}=await sb.auth.getSession();
+      if(!session){goTo("landing");}
+      else{
+        A.user=session.user;
+        const{data:prof}=await sb.from("profiles").select("*").eq("id",A.user.id).single();
+        if(prof)A.profile=prof;
+        try{await loadTerritory();}catch(e){}
+        startRT();startGPS();startSessionWatch();goTo("home");
+      }
+    }catch(e){console.error("init:",e);goTo("landing");}
+  },2000);
+});
 </script>
 </body>
 </html>
