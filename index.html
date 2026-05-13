@@ -104,6 +104,36 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
 .btnu:active{transform:scale(.97)}
 .toast{position:absolute;top:60px;left:50%;transform:translateX(-50%) translateY(-20px);background:rgba(255,34,85,0.15);border:.5px solid rgba(255,34,85,0.4);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:600;color:var(--rd);z-index:999;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.hub-tab.on{background:var(--cyd)!important;border-color:rgba(0,240,255,0.4)!important;color:var(--cy)!important}
+/* Settings panel */
+.settings-panel{position:fixed;top:0;left:0;right:0;bottom:0;z-index:200;background:rgba(0,0,0,0);pointer-events:none;transition:background .3s}
+.settings-panel.open{background:rgba(0,0,0,0.7);pointer-events:all}
+.settings-drawer{position:absolute;top:0;left:0;right:0;background:#0d0d15;border-radius:0 0 24px 24px;padding:0 0 24px;transform:translateY(-100%);transition:transform .35s cubic-bezier(.4,0,.2,1)}
+.settings-panel.open .settings-drawer{transform:translateY(0)}
+/* Countdown overlay */
+.countdown-overlay{position:fixed;inset:0;z-index:300;background:rgba(6,6,9,0.92);display:none;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.countdown-num{font-family:Orbitron,monospace;font-size:120px;font-weight:900;color:#fff;transition:transform .15s;text-shadow:0 0 60px rgba(0,240,255,0.5)}
+/* Toggle switch */
+.tog{width:44px;height:24px;background:#333;border-radius:12px;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--cy)}
+.tog::after{content:'';position:absolute;width:20px;height:20px;background:white;border-radius:50%;top:2px;left:2px;transition:left .2s}
+.tog.on::after{left:22px}
+/* Resume banner */
+.resume-banner{display:none;position:fixed;bottom:80px;left:20px;right:20px;z-index:150;background:rgba(255,149,0,0.15);border:1.5px solid var(--am);border-radius:var(--r);padding:12px 16px;align-items:center;gap:12px}
+.avatar-circle{width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--cy)}
+.avatar-sm{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1.5px solid var(--bd)}
+.avatar-xs{width:24px;height:24px;border-radius:50%;object-fit:cover;border:1px solid var(--bd)}
+#s-profile-view{z-index:20;justify-content:flex-end;background:rgba(0,0,0,0.7)}
+.profile-sheet{background:#0d0d15;border-radius:24px 24px 0 0;padding:24px 24px;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+#s-challenge-pick{z-index:21;justify-content:flex-end;background:rgba(0,0,0,0.7)}
+#s-challenge-incoming{z-index:30;align-items:center;justify-content:center;background:rgba(0,0,0,0.85)}
+.incoming-card{background:#0d0d15;border:1.5px solid var(--cy);border-radius:24px;padding:28px 24px;width:90%;max-width:360px;text-align:center}
+#s-challenge-live{z-index:5}
+.challenge-bar{height:8px;border-radius:4px;background:rgba(255,255,255,0.08);overflow:hidden;margin-top:6px}
+.challenge-fill{height:100%;border-radius:4px;transition:width .5s ease}
+#s-challenge-result{z-index:25;overflow-y:auto}
+.winner-crown{font-size:48px;text-align:center;margin:16px 0}
+.result-row{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:.5px solid var(--bd)}
 </style>
 </head>
 <body>
@@ -190,6 +220,44 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
           <button id="g-skip" onclick="setGender('')" style="flex:1;padding:10px;border-radius:var(--rs);border:.5px solid rgba(0,240,255,0.4);background:var(--cyd);color:var(--cy);font-size:13px;font-weight:600;cursor:pointer;transition:all .2s">Skip</button>
         </div>
       </div>
+      <!-- Auto-detect location -->
+      <div id="su-detect-wrap" style="display:none;align-items:center;justify-content:space-between;background:rgba(0,240,255,0.06);border:.5px solid rgba(0,240,255,0.25);border-radius:var(--rs);padding:12px 14px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="su-detect-flag" style="font-size:22px"></span>
+          <div>
+            <div style="font-size:11px;color:var(--ht)">We detected</div>
+            <div style="font-size:13px;font-weight:600" id="su-detect-text">—</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button onclick="confirmLocation()" style="padding:6px 12px;background:var(--cy);border:none;border-radius:var(--rs);font-size:11px;font-weight:700;color:#000;cursor:pointer">Yes</button>
+          <button onclick="changeLocation()" style="padding:6px 10px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);font-size:11px;color:var(--dm);cursor:pointer">Change</button>
+        </div>
+      </div>
+      <!-- Confirmed location -->
+      <div id="su-confirmed-wrap" style="display:none;align-items:center;gap:8px;padding:10px 14px;background:rgba(0,255,136,0.06);border:.5px solid rgba(0,255,136,0.2);border-radius:var(--rs)">
+        <span id="su-confirmed-flag" style="font-size:18px"></span>
+        <div style="font-size:13px;color:rgba(0,255,136,0.9);font-weight:500">Location confirmed</div>
+        <button onclick="changeLocation()" style="margin-left:auto;background:none;border:none;font-size:11px;color:var(--ht);cursor:pointer">change</button>
+      </div>
+      <!-- Manual input (shown if user taps Change) -->
+      <div id="su-manual-wrap" style="display:none;flex-direction:column;gap:10px">
+        <div>
+          <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Country</div>
+          <input class="inp" id="su-country-manual" type="text" placeholder="e.g. UAE, UK, India">
+        </div>
+      </div>
+      <!-- Hidden values -->
+      <input id="su-country" type="hidden" value="">
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Emirate / State <span style="color:var(--ht);font-weight:400">(auto-detected)</span></div>
+        <input class="inp" id="su-emirate" type="text" placeholder="e.g. Abu Dhabi Emirate, Dubai">
+      </div>
+      <input id="su-emirate-hidden" type="hidden" value="">
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">City</div>
+        <input class="inp" id="su-city" type="text" placeholder="Your city">
+      </div>
       <div>
         <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Date of birth <span style="color:var(--ht);font-weight:400">(optional)</span></div>
         <input class="inp" id="su-dob" type="date" style="color-scheme:dark">
@@ -256,10 +324,14 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <div class="gc"><div class="dot" id="gps-dot" style="background:#888"></div><span id="gps-txt">locating...</span></div>
-        <div class="av" id="av-letter">?</div>
+        <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="openSettings()" style="width:36px;height:36px;border-radius:50%;background:var(--sf);border:.5px solid var(--bd);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;color:var(--dm)">&#9881;</button>
+        <div class="av" id="av-letter" onclick="openMyProfile()" style="cursor:pointer">?</div>
+      </div>
       </div>
     </div>
     <div style="padding:0 20px;display:flex;flex-direction:column;gap:13px">
+      <div id="season-banner" style="display:none;background:rgba(255,149,0,0.1);border:.5px solid rgba(255,149,0,0.3);border-radius:var(--rs);padding:9px 14px;font-size:12px;font-weight:600;color:var(--am);text-align:center"></div>
       <div class="tc">
         <div class="tc-row">
           <div>
@@ -283,6 +355,15 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
         <button class="mbtn on" id="btn-run" onclick="setMode('run')" style="display:flex;align-items:center;justify-content:center;gap:6px"><img src="runner.png" style="width:22px;height:22px;object-fit:contain;filter:none" alt=""/>Run patrol</button>
         <button class="mbtn" id="btn-cycle" onclick="setMode('cycle')" style="display:flex;align-items:center;justify-content:center;gap:6px"><img src="cyclist.png" style="width:22px;height:22px;object-fit:contain;filter:none" alt=""/>Cycle intercept</button>
       </div>
+      <!-- City King Banner -->
+      <div id="city-king-wrap" style="display:none;background:rgba(255,149,0,0.08);border:.5px solid rgba(255,149,0,0.3);border-radius:var(--r);padding:12px 16px;align-items:center;justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">crown</span><div><div style="font-size:11px;color:var(--am);font-weight:700;letter-spacing:1px">CITY KING</div><div style="font-size:13px;font-weight:600" id="city-king-name">—</div></div></div>
+        <div style="font-family:Orbitron,monospace;font-size:12px;color:var(--am)" id="city-king-sectors">0</div>
+      </div>
+      <!-- Daily Bounties -->
+      <div id="bounty-wrap" style="display:none;background:rgba(255,200,0,0.08);border:.5px solid rgba(255,200,0,0.3);border-radius:var(--r);padding:12px 16px">
+        <div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px">target</span><div style="font-size:12px;font-weight:600;color:#ffd700" id="bounty-list">Loading bounties...</div></div>
+      </div>
       <button class="btn-p" onclick="startRun()">START RUN</button>
     </div>
   </div>
@@ -290,13 +371,14 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
     <button class="nb on" onclick="goTo('home')"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>Home</button>
     <button class="nb" onclick="goTo('territory')"><svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>Territory</button>
     <button class="nb" onclick="goTo('leaderboard')"><svg viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>Ranks</button>
-    <button class="nb" onclick="confirmSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
+    <button class="nb" onclick="goTo('challenge-hub');loadChallengeHub('global')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="14.31" y1="8" x2="20.05" y2="17.94"/><line x1="9.69" y1="8" x2="21.17" y2="8"/><line x1="7.38" y1="12" x2="13.12" y2="2.06"/><line x1="9.69" y1="16" x2="3.95" y2="6.06"/><line x1="14.31" y1="16" x2="2.83" y2="16"/><line x1="16.62" y1="12" x2="10.88" y2="21.94"/></svg>Rivals</button>
+
   </div>
 </div>
 <div id="s-run" class="screen hidden">
   <div class="safe-top" style="padding-bottom:10px">
     <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
-      <div class="liveb"><div class="ldot"></div>LIVE</div>
+      <div class="liveb"><div class="ldot"></div><span id="run-live-label">LIVE</span></div>
       <div style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700" id="run-timer">00:00:00</div>
       <div style="font-size:11px;color:var(--dm)" id="run-mode">run</div>
     </div>
@@ -310,10 +392,15 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
       <div><div class="rv" id="run-secs">0</div><div class="rl">sectors</div></div>
     </div>
     <div class="cflash" id="cflash">sector captured</div>
+    <div id="walk-warn" style="position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(255,149,0,0.15);border:.5px solid rgba(255,149,0,0.4);border-radius:20px;padding:7px 16px;font-size:11px;font-weight:600;color:#ff9500;pointer-events:none;z-index:700;opacity:0;transition:opacity .3s;white-space:nowrap">Walking — keep speed above 6 km/h to capture</div>
   </div>
   <div style="padding:0 20px;display:flex;flex-direction:column;gap:8px" class="safe-bot" style="padding-top:10px">
     <div style="display:flex;justify-content:space-between"><span style="font-size:11px;color:var(--ht)">calories</span><span style="font-size:11px;font-weight:600" id="run-kcal">0 kcal</span></div>
-    <button class="btn-d" onclick="endRun()">End run</button>
+    <div style="display:flex;gap:10px">
+    <button id="pause-btn" onclick="pauseRun()" style="flex:1;padding:14px;background:rgba(255,149,0,0.12);border:.5px solid rgba(255,149,0,0.35);border-radius:var(--r);font-size:13px;font-weight:600;color:var(--am);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">&#9646;&#9646; Pause</button>
+    <button id="resume-btn" onclick="resumeRun()" style="flex:1;padding:14px;background:rgba(0,240,255,0.12);border:.5px solid rgba(0,240,255,0.35);border-radius:var(--r);font-size:13px;font-weight:600;color:var(--cy);cursor:pointer;display:none;align-items:center;justify-content:center;gap:6px">&#9658; Resume</button>
+    <button onclick="endRun()" style="flex:1;padding:14px;background:rgba(255,34,85,0.12);border:.5px solid rgba(255,34,85,0.35);border-radius:var(--r);font-size:13px;font-weight:600;color:var(--rd);cursor:pointer">End run</button>
+  </div>
   </div>
 </div>
 <div id="s-summary" class="screen hidden">
@@ -358,9 +445,9 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
     <canvas id="cvs-t"></canvas>
     <div class="rvalert" id="rv-alert"></div>
     <div class="mleg">
-      <div class="li"><div class="ld" style="background:rgba(0,240,255,0.6)"></div>yours</div>
-      <div class="li"><div class="ld" style="background:rgba(255,34,85,0.6)"></div>rivals</div>
-      <div class="li"><div class="ld" style="background:rgba(255,255,255,0.1)"></div>unclaimed</div>
+      <div class="li"><div class="ld" style="background:#00f0ff;opacity:.8"></div>your run</div>
+      <div class="li"><div class="ld" style="background:#ff9500;opacity:.8"></div>your cycle</div>
+      <div class="li"><div class="ld" style="background:rgba(255,34,85,0.7)"></div>rivals</div>
     </div>
   </div>
   <div class="bnav">
@@ -386,6 +473,40 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
     <button class="nb" onclick="confirmSignOut()"><svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Sign out</button>
   </div>
 </div>
+<!-- Sign out confirmation modal -->
+<div id="signout-modal" style="display:none;position:fixed;inset:0;z-index:500;background:rgba(0,0,0,0.8);align-items:center;justify-content:center">
+  <div style="background:#0d0d15;border:1.5px solid rgba(255,34,85,0.4);border-radius:20px;padding:28px 24px;width:85%;max-width:320px;text-align:center">
+    <div style="font-size:28px;margin-bottom:12px">👋</div>
+    <div style="font-family:Orbitron,monospace;font-size:16px;font-weight:700;margin-bottom:8px">Sign out?</div>
+    <div style="font-size:13px;color:var(--ht);margin-bottom:22px;line-height:1.6">Your territory stays safe. Come back anytime.</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="cancelSignOut()" style="flex:1;padding:13px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--r);font-size:13px;color:var(--dm);cursor:pointer">Cancel</button>
+      <button onclick="confirmSignOut()" style="flex:1;padding:13px;background:rgba(255,34,85,0.15);border:.5px solid rgba(255,34,85,0.4);border-radius:var(--r);font-size:13px;font-weight:600;color:var(--rd);cursor:pointer">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHALLENGE HUB ═══ -->
+<div id="s-challenge-hub" class="screen hidden">
+  <div class="safe-top" style="padding-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+      <button onclick="goHome()" style="background:none;border:none;color:var(--dm);font-size:13px;cursor:pointer">back</button>
+      <div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--rd)">Challenge Hub</div>
+      <button onclick="loadChallengeHub(_challengeHubFilter)" style="background:none;border:none;color:var(--cy);font-size:12px;cursor:pointer">refresh</button>
+    </div>
+  </div>
+  <div style="display:flex;gap:4px;padding:0 16px 12px">
+    <button class="hub-tab on" data-filter="global" onclick="loadChallengeHub('global')" style="flex:1;padding:8px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--tx);cursor:pointer">Global</button>
+    <button class="hub-tab" data-filter="country" onclick="loadChallengeHub('country')" style="flex:1;padding:8px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">Country</button>
+    <button class="hub-tab" data-filter="city" onclick="loadChallengeHub('city')" style="flex:1;padding:8px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">City</button>
+    <button class="hub-tab" data-filter="nearby" onclick="loadChallengeHub('nearby')" style="flex:1;padding:8px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">Near me</button>
+  </div>
+  <div style="flex:1;overflow-y:auto" id="hub-list"><div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div></div>
+  <div style="padding:12px 20px" class="safe-bot">
+    <button id="open-challenge-btn" onclick="toggleOpenForChallenge()" style="width:100%;padding:14px;border-radius:var(--r);border:.5px solid var(--bd);background:var(--sf);font-family:Orbitron,monospace;font-size:12px;font-weight:700;letter-spacing:1px;color:var(--ht);cursor:pointer;transition:all .3s;display:flex;align-items:center;justify-content:center;gap:8px"><div id="open-challenge-dot" style="width:8px;height:8px;border-radius:50%;background:#888;flex-shrink:0"></div>CLOSED FOR CHALLENGE</button>
+  </div>
+</div>
+
 <div id="s-paywall" class="screen hidden">
   <div style="flex:1" onclick="dismissPaywall()"></div>
   <div class="pwsh">
@@ -402,6 +523,252 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
   </div>
 </div>
 <div class="toast" id="toast"></div>
+
+<!-- Countdown overlay -->
+<div class="countdown-overlay" id="countdown-overlay">
+  <div class="countdown-num" id="countdown-num">5</div>
+  <div style="font-family:Orbitron,monospace;font-size:14px;color:var(--ht);letter-spacing:4px">GET READY</div>
+</div>
+
+<!-- Resume session banner -->
+<div class="resume-banner" id="resume-banner">
+  <div style="flex:1">
+    <div style="font-size:12px;font-weight:700;color:var(--am)">Session in progress</div>
+    <div style="font-size:11px;color:var(--ht);margin-top:2px" id="resume-banner-dist">0.00km · 0 sectors</div>
+  </div>
+  <button onclick="resumeSavedSession()" style="padding:8px 14px;background:var(--am);border:none;border-radius:var(--rs);font-family:Orbitron,monospace;font-size:11px;font-weight:700;color:#000;cursor:pointer">RESUME</button>
+  <button onclick="discardSavedSession()" style="padding:8px 10px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);font-size:11px;color:var(--ht);cursor:pointer">Discard</button>
+</div>
+
+<!-- Settings panel (slide down) -->
+<div class="settings-panel" id="settings-panel" onclick="closeSettings()">
+  <div class="settings-drawer" onclick="event.stopPropagation()">
+    <div style="padding:max(44px,env(safe-area-inset-top)) 20px 0;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700">Settings</div>
+      <button onclick="closeSettings()" style="background:none;border:none;color:var(--dm);font-size:20px;cursor:pointer;padding:4px">x</button>
+    </div>
+    <!-- Profile info -->
+    <div style="padding:12px 20px;border-bottom:.5px solid var(--bd)">
+      <div style="font-size:11px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Profile</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div id="set-av" onclick="openMyProfile();closeSettings()" style="width:48px;height:48px;border-radius:50%;background:var(--cyd);border:2px solid var(--cy);display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--cy);cursor:pointer">S</div>
+        <div>
+          <div style="font-size:15px;font-weight:600" id="set-username">—</div>
+          <div style="font-size:11px;color:var(--ht);margin-top:2px"><span id="set-city-val">—</span>, <span id="set-emirate-val">—</span></div>
+          <div style="font-size:11px;color:var(--ht)"><span id="set-country-val">—</span></div>
+        </div>
+        <button onclick="openMyProfile();closeSettings()" style="margin-left:auto;padding:7px 12px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);font-size:12px;color:var(--dm);cursor:pointer">Edit</button>
+      </div>
+    </div>
+    <!-- Sound & Vibrate -->
+    <div style="padding:12px 20px;border-bottom:.5px solid var(--bd)">
+      <div style="font-size:11px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Sound & Feedback</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div>
+          <div style="font-size:13px;font-weight:500">Countdown sound</div>
+          <div style="font-size:11px;color:var(--ht)">Beeps on session start and capture</div>
+        </div>
+        <div class="tog on" id="set-sound" onclick="saveSetting('sound',!_settings.sound);this.classList.toggle('on')"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:13px;font-weight:500">Vibration</div>
+          <div style="font-size:11px;color:var(--ht)">Haptic feedback on events</div>
+        </div>
+        <div class="tog on" id="set-vibrate" onclick="saveSetting('vibrate',!_settings.vibrate);this.classList.toggle('on')"></div>
+      </div>
+    </div>
+    <!-- Sign out -->
+    <div style="padding:16px 20px">
+      <button onclick="promptSignOut()" style="width:100%;padding:13px;background:rgba(255,34,85,0.08);border:.5px solid rgba(255,34,85,0.25);border-radius:var(--r);font-size:13px;color:var(--rd);cursor:pointer;font-weight:600">Sign out</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PROFILE VIEW (bottom sheet) ═══ -->
+<div id="s-profile-view" class="screen hidden">
+  <div style="flex:1" onclick="closeSheet('profile-view')"></div>
+  <div class="profile-sheet">
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:18px">
+      <div style="position:relative">
+        <img id="pv-avatar" src="" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid var(--cy);display:none" alt="avatar"/>
+        <div id="pv-avatar-letter" style="width:60px;height:60px;border-radius:50%;background:var(--cyd);border:2px solid var(--cy);display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:20px;font-weight:700;color:var(--cy)">?</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:700" id="pv-name">—</div>
+        <div style="font-size:12px;color:var(--ht);margin-top:2px" id="pv-city">—</div>
+        <div style="font-size:11px;color:var(--dm);margin-top:3px" id="pv-gender"></div>
+      </div>
+      <button onclick="closeSheet('profile-view')" style="background:none;border:none;color:var(--ht);font-size:20px;cursor:pointer;padding:4px">x</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+      <div style="background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:12px;text-align:center">
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700;color:var(--cy)" id="pv-sectors">0</div>
+        <div style="font-size:9px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-top:2px">sectors</div>
+      </div>
+      <div style="background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:12px;text-align:center">
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700" id="pv-runs">0</div>
+        <div style="font-size:9px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-top:2px">runs</div>
+      </div>
+      <div style="background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:12px;text-align:center">
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700" id="pv-km">0</div>
+        <div style="font-size:9px;color:var(--ht);text-transform:uppercase;letter-spacing:1px;margin-top:2px">km</div>
+      </div>
+    </div>
+    <!-- Achievements -->
+    <div id="pv-achievements" style="margin-bottom:14px"></div>
+    <div id="pv-emoji-picker"></div>
+    <button class="btn-p" id="pv-challenge-btn" onclick="openChallengePick()" style="background:linear-gradient(135deg,#ff2255,#ff6600)">CHALLENGE</button>
+  </div>
+</div>
+
+<!-- ═══ CHALLENGE DISTANCE PICKER ═══ -->
+<div id="s-challenge-pick" class="screen hidden">
+  <div style="flex:1" onclick="closeSheet('challenge-pick')"></div>
+  <div class="profile-sheet">
+    <div style="font-family:Orbitron,monospace;font-size:16px;font-weight:700;text-align:center;margin-bottom:6px">Challenge <span id="cp-name" style="color:var(--rd)">—</span></div>
+    <div style="font-size:12px;color:var(--ht);text-align:center;margin-bottom:20px">Pick the race distance</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:10px">
+        <button onclick="sendChallenge(2)" style="flex:1;padding:16px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--r);font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--tx);cursor:pointer">2 km</button>
+        <button onclick="sendChallenge(3)" style="flex:1;padding:16px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--r);font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--tx);cursor:pointer">3 km</button>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="sendChallenge(5)" style="flex:1;padding:16px;background:var(--sf);border:.5px solid rgba(0,240,255,0.35);border-radius:var(--r);font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--cy);cursor:pointer">5 km</button>
+        <button onclick="sendChallenge(8)" style="flex:1;padding:16px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--r);font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--tx);cursor:pointer">8 km</button>
+      </div>
+      <button onclick="sendChallenge(10)" style="width:100%;padding:16px;background:var(--sf);border:.5px solid rgba(255,149,0,0.35);border-radius:var(--r);font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--am);cursor:pointer">10 km</button>
+    </div>
+    <button onclick="closeSheet('challenge-pick')" style="width:100%;padding:12px;background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;margin-top:8px">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══ INCOMING CHALLENGE ═══ -->
+<div id="s-challenge-incoming" class="screen hidden">
+  <div class="incoming-card">
+    <div style="font-size:32px;margin-bottom:12px">sword</div>
+    <div style="font-family:Orbitron,monospace;font-size:13px;color:var(--ht);letter-spacing:2px;margin-bottom:8px">INCOMING CHALLENGE</div>
+    <div style="font-size:20px;font-weight:700;margin-bottom:4px"><span id="ic-name" style="color:var(--rd)">—</span> challenges you!</div>
+    <div style="font-size:28px;font-weight:700;color:var(--cy);font-family:Orbitron,monospace;margin:14px 0" id="ic-dist">— km</div>
+    <div style="font-size:12px;color:var(--ht);margin-bottom:20px">First to complete the distance wins</div>
+    <div style="display:flex;gap:10px">
+      <button onclick="declineChallenge()" class="btn-d" style="flex:1;padding:14px">Decline</button>
+      <button onclick="acceptChallenge()" class="btn-p" style="flex:1;padding:14px;background:linear-gradient(135deg,var(--cy),#0080ff)">ACCEPT</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ CHALLENGE LIVE ═══ -->
+<div id="s-challenge-live" class="screen hidden">
+  <div class="safe-top" style="padding-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+      <div style="display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--rd);letter-spacing:1px"><div class="ldot"></div>RACE</div>
+      <div style="font-family:Orbitron,monospace;font-size:15px;font-weight:700" id="cl-timer">00:00:00</div>
+      <div style="font-size:11px;color:var(--am)" id="cl-dist-target">— km</div>
+    </div>
+  </div>
+  <div style="padding:0 20px;display:flex;flex-direction:column;gap:14px;flex:1">
+    <div style="background:var(--sf);border:.5px solid rgba(0,240,255,0.3);border-radius:var(--r);padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div id="cl-my-av" style="width:28px;height:28px;border-radius:50%;background:var(--cyd);border:1.5px solid var(--cy);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--cy)">Y</div>
+          <span style="font-size:13px;font-weight:600" id="cl-my-name">You</span>
+        </div>
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700;color:var(--cy)" id="cl-my-km">0.00 km</div>
+      </div>
+      <div class="challenge-bar"><div id="cl-my-bar" class="challenge-fill" style="width:0%;background:#00f0ff"></div></div>
+      <div style="font-size:10px;color:var(--ht);margin-top:4px" id="cl-my-pace">pace: --</div>
+    </div>
+    <div style="background:var(--sf);border:.5px solid rgba(255,34,85,0.3);border-radius:var(--r);padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div id="cl-opp-av" style="width:28px;height:28px;border-radius:50%;background:rgba(255,34,85,0.15);border:1.5px solid var(--rd);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--rd)">?</div>
+          <span style="font-size:13px;font-weight:600" id="cl-opp-name">Opponent</span>
+        </div>
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700;color:var(--rd)" id="cl-opp-km">0.00 km</div>
+      </div>
+      <div class="challenge-bar"><div id="cl-opp-bar" class="challenge-fill" style="width:0%;background:#ff2255"></div></div>
+      <div style="font-size:10px;color:var(--ht);margin-top:4px" id="cl-opp-pace">pace: --</div>
+    </div>
+    <div class="mwrap" style="flex:1;min-height:180px;border-radius:var(--r);overflow:hidden">
+      <div id="map-c"></div>
+      <canvas id="cvs-c"></canvas>
+    </div>
+  </div>
+  <div style="padding:12px 20px" class="safe-bot">
+    <button class="btn-d" onclick="endChallengeRun()">End race</button>
+  </div>
+</div>
+
+<!-- ═══ CHALLENGE RESULT ═══ -->
+<div id="s-challenge-result" class="screen hidden">
+  <div class="safe-top"></div>
+  <div style="flex:1;overflow-y:auto">
+    <div style="text-align:center;padding:20px">
+      <div id="cr-crown" style="font-size:48px;margin-bottom:8px">trophy</div>
+      <div style="font-size:11px;color:var(--ht);letter-spacing:3px;text-transform:uppercase;margin-bottom:6px" id="cr-label">race complete</div>
+      <div style="font-family:Orbitron,monospace;font-size:28px;font-weight:900" id="cr-winner-name">—</div>
+      <div style="font-size:13px;color:var(--ht);margin-top:4px" id="cr-winner-sub">wins the challenge!</div>
+    </div>
+    <div class="result-row">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="cr-my-av2" style="width:34px;height:34px;border-radius:50%;background:var(--cyd);border:1.5px solid var(--cy);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--cy)">Y</div>
+        <div>
+          <div style="font-size:13px;font-weight:600" id="cr-my-name2">You</div>
+          <div style="font-size:10px;color:var(--ht)" id="cr-my-pace2">pace —</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700;color:var(--cy)" id="cr-my-time">—</div>
+        <div style="font-size:10px;color:var(--ht)" id="cr-my-km2">— km</div>
+      </div>
+    </div>
+    <div class="result-row">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="cr-opp-av2" style="width:34px;height:34px;border-radius:50%;background:rgba(255,34,85,0.15);border:1.5px solid var(--rd);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--rd)">?</div>
+        <div>
+          <div style="font-size:13px;font-weight:600" id="cr-opp-name2">Opponent</div>
+          <div style="font-size:10px;color:var(--ht)" id="cr-opp-pace2">pace —</div>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:Orbitron,monospace;font-size:18px;font-weight:700;color:var(--rd)" id="cr-opp-time">—</div>
+        <div style="font-size:10px;color:var(--ht)" id="cr-opp-km2">— km</div>
+      </div>
+    </div>
+    <div style="padding:20px">
+      <button class="btn-p" onclick="goHome()">DONE</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MY PROFILE EDITOR ═══ -->
+<div id="s-my-profile" class="screen hidden" style="overflow-y:auto">
+  <div class="safe-top" style="padding-bottom:10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+      <button onclick="goHome()" style="background:none;border:none;color:var(--dm);font-size:13px;cursor:pointer">back</button>
+      <div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700">My profile</div>
+      <div style="width:40px"></div>
+    </div>
+  </div>
+  <div style="padding:0 20px;display:flex;flex-direction:column;align-items:center;gap:16px">
+    <div style="position:relative;margin-top:10px">
+      <img id="mp-avatar-img" src="" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--cy);display:none" alt="avatar"/>
+      <div id="mp-avatar-letter" style="width:90px;height:90px;border-radius:50%;background:var(--cyd);border:3px solid var(--cy);display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:28px;font-weight:700;color:var(--cy)">?</div>
+      <label for="mp-file-input" style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;background:var(--cy);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px">+</label>
+      <input id="mp-file-input" type="file" accept="image/*" style="display:none" onchange="uploadAvatar(event)"/>
+    </div>
+    <div style="font-size:18px;font-weight:700" id="mp-username">—</div>
+    <div id="mp-upload-status" style="font-size:12px;color:var(--cy);min-height:16px"></div>
+    <div style="width:100%;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--dm);font-size:13px">Sectors</span><span style="font-family:Orbitron,monospace;font-weight:700;color:var(--cy)" id="mp-sectors">0</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--dm);font-size:13px">Total runs</span><span style="font-family:Orbitron,monospace;font-weight:700" id="mp-runs">0</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--dm);font-size:13px">Total km</span><span style="font-family:Orbitron,monospace;font-weight:700" id="mp-km">0.0</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--dm);font-size:13px">Calories burned</span><span style="font-family:Orbitron,monospace;font-weight:700" id="mp-cal">0</span></div>
+    </div>
+    <button onclick="confirmSignOut()" class="btn-out" style="width:100%">Sign out</button>
+  </div>
+</div>
 <script>
 // CONFIG - REPLACE THESE TWO LINES
 const SUPA_URL = "https://oyrltlyjyshkrszhrsyz.supabase.co";
@@ -413,13 +780,41 @@ const SZ=0.0004;
 const hid=(lat,lng)=>`${Math.floor(lat/SZ)}:${Math.floor(lng/SZ)}`;
 const hctr=id=>{const[r,c]=id.split(":").map(Number);return{lat:(r+.5)*SZ,lng:(c+.5)*SZ}};
 const fmt=s=>`${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
-const pace=(km,sec)=>{if(km<.05)return"--";const m=Math.floor((sec/60)/km),s=Math.round(((sec/60)/km-m)*60);return`${m}'${String(s).padStart(2,"0")}"`;};
+function getCountryCode(countryName) {
+  for(var i=0;i<COUNTRY_BOXES.length;i++){if(COUNTRY_BOXES[i][1].toLowerCase()===countryName.toLowerCase())return COUNTRY_BOXES[i][0];}
+  return '';
+}
+function pace(km, sec) {
+  if (!km || km < 0.05) return "--";
+  var mpm = (sec / 60) / km;
+  var m = Math.floor(mpm);
+  var s = Math.round((mpm - m) * 60);
+  if (s >= 60) { m++; s = 0; }
+  return m + "'" + (s < 10 ? "0" : "") + s + '"';
+}
+function rollingPace() {
+  if (!A.sess || !A.sess.paceHistory || A.sess.paceHistory.length < 2) {
+    return pace(A.sess ? A.sess.km : 0, A.sess ? A.sess.elapsed : 0);
+  }
+  var now = Date.now();
+  var recent = A.sess.paceHistory.filter(function(p) { return now - p.t < 30000; });
+  if (recent.length < 2) return pace(A.sess.km || 0, A.sess.elapsed || 0);
+  var distKm = recent.reduce(function(acc, p) { return acc + p.d; }, 0);
+  var timeSec = (recent[recent.length - 1].t - recent[0].t) / 1000;
+  if (distKm < 0.005 || timeSec < 5) return "--";
+  var mpm2 = (timeSec / 60) / distKm;
+  var m2 = Math.floor(mpm2);
+  var s2 = Math.round((mpm2 - m2) * 60);
+  if (s2 >= 60) { m2++; s2 = 0; }
+  return m2 + "'" + (s2 < 10 ? "0" : "") + s2 + '"';
+}
 const hav=(la1,lo1,la2,lo2)=>{const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));};
 const calcCal=(sec,mode)=>Math.round((mode==="run"?10:8)*70*(sec/3600));
+const calcCalFromDist=(km,mode)=>Math.round((mode==="run"?60:40)*km);
 function showToast(msg,good=false){const t=el("toast");t.textContent=msg;t.style.background=good?"rgba(0,240,255,0.15)":"rgba(255,34,85,0.15)";t.style.borderColor=good?"rgba(0,240,255,0.4)":"rgba(255,34,85,0.4)";t.style.color=good?"#00f0ff":"#ff2255";t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3000);}
 let authMode="login";
 let selectedGender="";
-function switchTab(m){authMode=m;el("tab-login").classList.toggle("on",m==="login");el("tab-signup").classList.toggle("on",m==="signup");const su=m==="signup";el("field-uname").style.display=su?"block":"none";el("field-gender").style.display=su?"block":"none";el("field-dob").style.display=su?"block":"none";el("auth-btn").textContent=su?"CREATE ACCOUNT":"LOGIN";el("auth-err").textContent="";}
+function switchTab(m){authMode=m;el("tab-login").classList.toggle("on",m==="login");el("tab-signup").classList.toggle("on",m==="signup");const su=m==="signup";el("field-uname").style.display=su?"block":"none";el("field-gender").style.display=su?"block":"none";el("field-dob").style.display=su?"block":"none";el("auth-btn").textContent=su?"CREATE ACCOUNT":"LOGIN";el("auth-err").textContent="";if(m==="signup")setTimeout(detectAndFillLocation,500);}
 function setGender(g){selectedGender=g;["male","female","skip"].forEach(id=>{const btn=el("g-"+id);if(!btn)return;const active=(id===g)||(id==="skip"&&g==="");btn.style.background=active?"var(--cyd)":"var(--sf)";btn.style.borderColor=active?"rgba(0,240,255,0.4)":"var(--bd)";btn.style.color=active?"var(--cy)":"var(--dm)";});}
 async function submitAuth(){const email=el("inp-email").value.trim(),pass=el("inp-pass").value,uname=el("inp-uname").value.trim(),btn=el("auth-btn");el("auth-err").textContent="";if(!email||!pass){el("auth-err").textContent="Email and password required";return;}if(authMode==="signup"&&uname.length<3){el("auth-err").textContent="Username min 3 characters";return;}btn.disabled=true;btn.textContent="...";if(authMode==="login"){const{error}=await sb.auth.signInWithPassword({email,password:pass});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}}else{const dob=el("inp-dob")?.value||null;
     const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob||null}}});if(error){el("auth-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}if(data.user&&!data.session){el("auth-err").textContent="Check your email to confirm account";btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}}}
@@ -490,8 +885,9 @@ async function doLogin(){
     A.user=data.user;
     try{const{data:p}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(p)A.profile=p;}catch(e){}
     loadTerritory().catch(()=>{});
+    loadFogExplored().catch(()=>{});
     try{await setSessionKey();}catch(e){}
-    startSessionWatch();startRT();startGPS();
+    startSessionWatch();startRT();startGPS();startChallengeWatch();startReactionWatch();loadSettings().catch(()=>{});checkSeasonReset();restoreSessionState();
     btn.disabled=false;btn.textContent="LOGIN";
     goTo("home");
   }catch(e){
@@ -508,7 +904,9 @@ async function doSignup(){
   if(!email||!pass){el("su-err").textContent="Email and password required";return;}
   if(pass.length<6){el("su-err").textContent="Password min 6 characters";return;}
   const btn=el("su-btn");btn.disabled=true;btn.textContent="Creating account...";
-  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob}}});
+  var countryVal=el("su-country")?.value||"";if(!countryVal&&el("su-country-manual"))countryVal=el("su-country-manual").value.trim();const country=countryVal;const city=el("su-city")?.value.trim()||"Abu Dhabi";
+  const emirate=document.getElementById('su-emirate')?.value.trim()||_detectedEmirate||'';
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob,country:country,city:city,emirate:emirate}}});
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
   // Email confirmation disabled → session exists, go straight to home
@@ -530,41 +928,1661 @@ async function doSignup(){
   }
   btn.disabled=false;btn.textContent="CREATE ACCOUNT";
 }
+function promptSignOut() {
+  closeSettings();
+  var modal = document.getElementById('signout-modal');
+  if (modal) modal.style.display = 'flex';
+}
+function cancelSignOut() {
+  var modal = document.getElementById('signout-modal');
+  if (modal) modal.style.display = 'none';
+}
 async function confirmSignOut(){if(!confirm("Sign out?"))return;stopGPS();stopPresence();stopRT();stopAnim();clearInterval(_sessionWatch);localStorage.removeItem(SESSION_KEY);await sb.auth.signOut();}
-function startGPS(){if(!navigator.geolocation){gpsUI("no GPS",false);return;}A.gpsId=navigator.geolocation.watchPosition(p=>{A.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy};A.gpsReady=p.coords.accuracy<60;gpsUI(p.coords.accuracy<20?"GPS locked":p.coords.accuracy<60?"GPS good":"GPS weak",A.gpsReady);if(A.sess?.on)onMove(A.pos.lat,A.pos.lng);if(A.marker&&A.map)A.marker.setLatLng([A.pos.lat,A.pos.lng]);},()=>gpsUI("GPS off",false),{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
+// ══════════════════════════════════════════════════════
+//  PROFILE PICTURE
+// ══════════════════════════════════════════════════════
+function getAvatarHTML(profile, size) {
+  size = size || 34;
+  if (profile && profile.avatar_url) {
+    return '<img src="' + profile.avatar_url + '" style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;object-fit:cover;border:1.5px solid var(--cy)" alt="avatar"/>';
+  }
+  var letter = profile && profile.username ? profile.username.charAt(0).toUpperCase() : '?';
+  return '<div style="width:' + size + 'px;height:' + size + 'px;border-radius:50%;background:var(--cyd);border:1.5px solid var(--cy);display:flex;align-items:center;justify-content:center;font-size:' + Math.floor(size/2.5) + 'px;font-weight:700;color:var(--cy)">' + letter + '</div>';
+}
+
+function setAvatarEl(imgEl, letterEl, profile) {
+  if (!profile) return;
+  if (profile.avatar_url) {
+    imgEl.src = profile.avatar_url;
+    imgEl.style.display = 'block';
+    if (letterEl) letterEl.style.display = 'none';
+  } else {
+    if (letterEl) {
+      letterEl.textContent = profile.username ? profile.username.charAt(0).toUpperCase() : '?';
+      letterEl.style.display = 'flex';
+    }
+    imgEl.style.display = 'none';
+  }
+}
+
+async function uploadAvatar(event) {
+  var file = event.target.files[0];
+  if (!file || !A.user) return;
+  var status = el('mp-upload-status');
+  if (status) status.textContent = 'Uploading...';
+  try {
+    var ext = file.name.split('.').pop();
+    var path = A.user.id + '/avatar.' + ext;
+    var res = await sb.storage.from('avatars').upload(path, file, { upsert: true });
+    if (res.error) throw res.error;
+    var urlRes = sb.storage.from('avatars').getPublicUrl(path);
+    var url = urlRes.data.publicUrl + '?t=' + Date.now();
+    await sb.from('profiles').update({ avatar_url: url }).eq('id', A.user.id);
+    if (A.profile) A.profile.avatar_url = url;
+    var img = el('mp-avatar-img');
+    var lt = el('mp-avatar-letter');
+    if (img) { img.src = url; img.style.display = 'block'; }
+    if (lt) lt.style.display = 'none';
+    var avLetter = el('av-letter');
+    if (avLetter && A.profile) avLetter.textContent = A.profile.username ? A.profile.username.charAt(0).toUpperCase() : '?';
+    if (status) status.textContent = 'Profile picture updated!';
+    setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+  } catch(e) {
+    if (status) status.textContent = 'Upload failed. Try again.';
+    console.error(e);
+  }
+}
+
+function openMyProfile() {
+  if (!A.profile) return;
+  var un = el('mp-username'); if (un) un.textContent = A.profile.username || '—';
+  var sec = el('mp-sectors'); if (sec) sec.textContent = A.profile.total_sectors || 0;
+  var runs = el('mp-runs'); if (runs) runs.textContent = A.profile.total_runs || 0;
+  var km = el('mp-km'); if (km) km.textContent = parseFloat(A.profile.total_km || 0).toFixed(1);
+  var cal = el('mp-cal'); if (cal) cal.textContent = A.profile.total_cal || 0;
+  setAvatarEl(el('mp-avatar-img'), el('mp-avatar-letter'), A.profile);
+  goTo('my-profile');
+}
+
+// ══════════════════════════════════════════════════════
+//  VIEW ANOTHER USER'S PROFILE
+// ══════════════════════════════════════════════════════
+var _viewingProfile = null;
+
+async function viewProfile(userId) {
+  if (!userId || userId === A.user.id) { openMyProfile(); return; }
+  try {
+    var res = await sb.from('profiles').select('*').eq('id', userId).single();
+    if (!res.data) return;
+    var p = res.data;
+    _viewingProfile = p;
+    var nameEl = el('pv-name'); if (nameEl) nameEl.textContent = p.username || '—';
+    var cityEl = el('pv-city'); if (cityEl) cityEl.textContent = p.city || 'Unknown city';
+    var gEl = el('pv-gender');
+    if (gEl) gEl.textContent = p.gender === 'male' ? '\u2642 Male' : p.gender === 'female' ? '\u2640 Female' : '';
+    var secEl = el('pv-sectors'); if (secEl) secEl.textContent = p.total_sectors || 0;
+    var runEl = el('pv-runs'); if (runEl) runEl.textContent = p.total_runs || 0;
+    var kmEl = el('pv-km'); if (kmEl) kmEl.textContent = parseFloat(p.total_km || 0).toFixed(1);
+    var avatarImg = el('pv-avatar');
+    var avatarLetter = el('pv-avatar-letter');
+    setAvatarEl(avatarImg, avatarLetter, p);
+    renderAchievements(p, 'pv-achievements');
+    var eEl=document.getElementById('pv-emoji-picker');if(eEl)eEl.innerHTML=renderEmojiPicker(p.id,p.username||'?');
+    var sheet = el('s-profile-view');
+    if (sheet) { sheet.classList.remove('hidden'); sheet.classList.add('active'); }
+  } catch(e) { console.error(e); }
+}
+
+function closeSheet(name) {
+  var s = el('s-' + name);
+  if (s) { s.classList.add('hidden'); s.classList.remove('active'); }
+}
+
+function openChallengePick() {
+  if (!_viewingProfile) return;
+  closeSheet('profile-view');
+  var nm = el('cp-name'); if (nm) nm.textContent = _viewingProfile.username;
+  var s = el('s-challenge-pick');
+  if (s) { s.classList.remove('hidden'); s.classList.add('active'); }
+}
+
+// ══════════════════════════════════════════════════════
+//  CHALLENGE SYSTEM
+// ══════════════════════════════════════════════════════
+var _activeChallenge = null;
+var _challengeCh = null;
+var _challengeTick = null;
+var _challengeSess = null;
+var _mapC = null;
+var _cvsC = null;
+var _ctxC = null;
+
+async function sendChallenge(distKm) {
+  closeSheet('challenge-pick');
+  if (!_viewingProfile || !A.user || !A.profile) return;
+  try {
+    var res = await sb.from('challenges').insert({
+      challenger_id: A.user.id,
+      challenged_id: _viewingProfile.id,
+      challenger_name: A.profile.username,
+      challenged_name: _viewingProfile.username,
+      distance_km: distKm,
+      status: 'pending'
+    }).select().single();
+    if (res.error) throw res.error;
+    _activeChallenge = res.data;
+    showToast('Challenge sent to ' + _viewingProfile.username + '!', true);
+    startChallengeWatch();
+  } catch(e) {
+    showToast('Failed to send challenge');
+    console.error(e);
+  }
+}
+
+function startChallengeWatch() {
+  if (_challengeCh) { sb.removeChannel(_challengeCh); }
+  _challengeCh = sb.channel('challenge_' + (A.user ? A.user.id : 'x'))
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'challenges' }, function(payload) {
+      var row = payload.new;
+      if (!row) return;
+      if (_activeChallenge && row.id === _activeChallenge.id) {
+        _activeChallenge = row;
+        if (row.status === 'accepted' && !_challengeSess) {
+          startChallengeRun();
+        }
+        if (row.status === 'declined') {
+          showToast(_activeChallenge.challenged_name + ' declined the challenge');
+          _activeChallenge = null;
+        }
+        if (row.status === 'finished') {
+          showChallengeResult(row);
+        }
+      }
+      // Incoming challenge for challenged user
+      if (row.challenger_id !== A.user.id && row.challenged_id === A.user.id && row.status === 'pending') {
+        _activeChallenge = row;
+        showIncomingChallenge(row);
+      }
+    })
+    .subscribe();
+}
+
+function showIncomingChallenge(ch) {
+  var nm = el('ic-name'); if (nm) nm.textContent = ch.challenger_name;
+  var dist = el('ic-dist'); if (dist) dist.textContent = ch.distance_km + ' km';
+  var s = el('s-challenge-incoming');
+  if (s) { s.classList.remove('hidden'); s.classList.add('active'); }
+}
+
+async function acceptChallenge() {
+  if (!_activeChallenge) return;
+  var s = el('s-challenge-incoming');
+  if (s) { s.classList.add('hidden'); s.classList.remove('active'); }
+  try {
+    await sb.from('challenges').update({ status: 'accepted' }).eq('id', _activeChallenge.id);
+    startChallengeRun();
+  } catch(e) { console.error(e); }
+}
+
+async function declineChallenge() {
+  if (!_activeChallenge) return;
+  var s = el('s-challenge-incoming');
+  if (s) { s.classList.add('hidden'); s.classList.remove('active'); }
+  try {
+    await sb.from('challenges').update({ status: 'declined' }).eq('id', _activeChallenge.id);
+  } catch(e) {}
+  _activeChallenge = null;
+}
+
+function startChallengeRun() {
+  if (!_activeChallenge) return;
+  var iAmChallenger = _activeChallenge.challenger_id === A.user.id;
+  var myName = A.profile ? A.profile.username : 'You';
+  var oppName = iAmChallenger ? _activeChallenge.challenged_name : _activeChallenge.challenger_name;
+  _challengeSess = { on: true, t0: Date.now(), elapsed: 0, km: 0, plat: A.pos.lat, plng: A.pos.lng, positions: [[A.pos.lat, A.pos.lng]], paceHistory: [] };
+
+  var dist = _activeChallenge.distance_km;
+  var dt = el('cl-dist-target'); if (dt) dt.textContent = dist + ' km target';
+  var mn = el('cl-my-name'); if (mn) mn.textContent = myName;
+  var on = el('cl-opp-name'); if (on) on.textContent = oppName;
+  var ma = el('cl-my-av'); if (ma) ma.textContent = myName.charAt(0).toUpperCase();
+  var oa = el('cl-opp-av'); if (oa) oa.textContent = oppName.charAt(0).toUpperCase();
+
+  goTo('challenge-live');
+  setTimeout(function() { buildChallengeMap(); }, 300);
+  startGPS();
+
+  clearInterval(_challengeTick);
+  _challengeTick = setInterval(function() {
+    if (!_challengeSess || !_challengeSess.on) { clearInterval(_challengeTick); return; }
+    _challengeSess.elapsed = Math.floor((Date.now() - _challengeSess.t0) / 1000);
+    var tmr = el('cl-timer'); if (tmr) tmr.textContent = fmt(_challengeSess.elapsed);
+
+    var dist2 = _activeChallenge ? _activeChallenge.distance_km : 5;
+    var pct = Math.min(100, (_challengeSess.km / dist2) * 100);
+    var myKmEl = el('cl-my-km'); if (myKmEl) myKmEl.textContent = _challengeSess.km.toFixed(2) + ' km';
+    var myBar = el('cl-my-bar'); if (myBar) myBar.style.width = pct + '%';
+    var myPc = el('cl-my-pace');
+    if (myPc) {
+      if (_challengeSess.paceHistory && _challengeSess.paceHistory.length > 1) {
+        var now = Date.now();
+        var recent = _challengeSess.paceHistory.filter(function(p) { return now - p.t < 30000; });
+        if (recent.length > 1) {
+          var dk = recent.reduce(function(a, p) { return a + p.d; }, 0);
+          var ts = (recent[recent.length-1].t - recent[0].t) / 1000;
+          myPc.textContent = 'pace: ' + pace(dk, ts);
+        }
+      }
+    }
+
+    // Broadcast my progress
+    if (_activeChallenge && A.user) {
+      var update = {};
+      var iAmChallenger2 = _activeChallenge.challenger_id === A.user.id;
+      if (iAmChallenger2) {
+        update.challenger_km = _challengeSess.km;
+      } else {
+        update.challenged_km = _challengeSess.km;
+      }
+      sb.from('challenges').update(update).eq('id', _activeChallenge.id).then(function() {});
+    }
+
+    // Check opponent progress from DB
+    if (_activeChallenge) {
+      var iAmC = _activeChallenge.challenger_id === A.user.id;
+      var oppKm = iAmC ? (_activeChallenge.challenged_km || 0) : (_activeChallenge.challenger_km || 0);
+      var oppPct = Math.min(100, (oppKm / _activeChallenge.distance_km) * 100);
+      var oppKmEl = el('cl-opp-km'); if (oppKmEl) oppKmEl.textContent = parseFloat(oppKm).toFixed(2) + ' km';
+      var oppBar = el('cl-opp-bar'); if (oppBar) oppBar.style.width = oppPct + '%';
+    }
+
+    // Check if I finished
+    if (_challengeSess.km >= (_activeChallenge ? _activeChallenge.distance_km : 999)) {
+      endChallengeRun();
+    }
+  }, 1000);
+}
+
+function onChallengeMove(lat, lng) {
+  if (!_challengeSess || !_challengeSess.on) return;
+  if (A.pos.acc > 40) return;
+  var d = hav(_challengeSess.plat, _challengeSess.plng, lat, lng);
+  if (d < 0.008 || d > 0.03) return;
+  _challengeSess.km += d;
+  _challengeSess.plat = lat;
+  _challengeSess.plng = lng;
+  _challengeSess.positions.push([lat, lng]);
+  if (!_challengeSess.paceHistory) _challengeSess.paceHistory = [];
+  _challengeSess.paceHistory.push({ t: Date.now(), d: d });
+  if (_challengeSess.paceHistory.length > 200) _challengeSess.paceHistory.shift();
+}
+
+async function endChallengeRun() {
+  if (!_challengeSess) return;
+  _challengeSess.on = false;
+  clearInterval(_challengeTick);
+  if (!_activeChallenge || !A.user) return;
+
+  var iAmChallenger = _activeChallenge.challenger_id === A.user.id;
+  var myTime = _challengeSess.elapsed;
+  var myKm = _challengeSess.km;
+  var myPaceStr = pace(myKm, myTime);
+
+  try {
+    var update = { status: 'finished' };
+    if (iAmChallenger) {
+      update.challenger_km = myKm;
+      update.challenger_time = myTime;
+      update.challenger_pace = myPaceStr;
+    } else {
+      update.challenged_km = myKm;
+      update.challenged_time = myTime;
+      update.challenged_pace = myPaceStr;
+    }
+    // Determine winner
+    var myDone = myKm >= _activeChallenge.distance_km;
+    var oppTime = iAmChallenger ? _activeChallenge.challenged_time : _activeChallenge.challenger_time;
+    if (myDone && !oppTime) {
+      update.winner_id = A.user.id;
+    } else if (myTime && oppTime) {
+      update.winner_id = myTime <= oppTime ? A.user.id : (iAmChallenger ? _activeChallenge.challenged_id : _activeChallenge.challenger_id);
+    }
+    var res = await sb.from('challenges').update(update).eq('id', _activeChallenge.id).select().single();
+    if (res.data) showChallengeResult(res.data);
+    else showChallengeResult(_activeChallenge);
+  } catch(e) { console.error(e); goHome(); }
+}
+
+function showChallengeResult(ch) {
+  var iAmChallenger = ch.challenger_id === A.user.id;
+  var myName = iAmChallenger ? ch.challenger_name : ch.challenged_name;
+  var oppName = iAmChallenger ? ch.challenged_name : ch.challenger_name;
+  var myKm = iAmChallenger ? (ch.challenger_km || 0) : (ch.challenged_km || 0);
+  var oppKm = iAmChallenger ? (ch.challenged_km || 0) : (ch.challenger_km || 0);
+  var myTime = iAmChallenger ? ch.challenger_time : ch.challenged_time;
+  var oppTime = iAmChallenger ? ch.challenged_time : ch.challenger_time;
+  var myPaceStr = iAmChallenger ? ch.challenger_pace : ch.challenged_pace;
+  var oppPaceStr = iAmChallenger ? ch.challenged_pace : ch.challenger_pace;
+  var iWon = ch.winner_id === A.user.id;
+
+  var crown = el('cr-crown'); if (crown) crown.textContent = iWon ? 'WIN' : 'FINISH';
+  var wn = el('cr-winner-name'); if (wn) { wn.textContent = iWon ? myName : oppName; wn.style.color = iWon ? 'var(--cy)' : 'var(--rd)'; }
+  var ws = el('cr-winner-sub'); if (ws) ws.textContent = 'wins the challenge!';
+  var mn = el('cr-my-name2'); if (mn) mn.textContent = myName;
+  var on2 = el('cr-opp-name2'); if (on2) on2.textContent = oppName;
+  var mt = el('cr-my-time'); if (mt) mt.textContent = myTime ? fmt(myTime) : '--';
+  var ot = el('cr-opp-time'); if (ot) ot.textContent = oppTime ? fmt(oppTime) : '--';
+  var mk = el('cr-my-km2'); if (mk) mk.textContent = parseFloat(myKm).toFixed(2) + ' km';
+  var ok2 = el('cr-opp-km2'); if (ok2) ok2.textContent = parseFloat(oppKm).toFixed(2) + ' km';
+  var mp2 = el('cr-my-pace2'); if (mp2) mp2.textContent = 'pace: ' + (myPaceStr || '--');
+  var op2 = el('cr-opp-pace2'); if (op2) op2.textContent = 'pace: ' + (oppPaceStr || '--');
+
+  _activeChallenge = null;
+  _challengeSess = null;
+  goTo('challenge-result');
+}
+
+function buildChallengeMap() {
+  if (_mapC) { try { _mapC.remove(); } catch(e) {} _mapC = null; }
+  _mapC = L.map('map-c', { zoomControl: false, attributionControl: false }).setView([A.pos.lat, A.pos.lng], 16);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, opacity: 0.85 }).addTo(_mapC);
+  var ico = L.divIcon({ className: '', html: '<div style="width:14px;height:14px;border-radius:50%;background:#00f0ff;border:2px solid white;box-shadow:0 0 8px #00f0ff"></div>', iconSize: [14,14], iconAnchor: [7,7] });
+  L.marker([A.pos.lat, A.pos.lng], { icon: ico }).addTo(_mapC);
+  _cvsC = el('cvs-c');
+  _ctxC = _cvsC ? _cvsC.getContext('2d') : null;
+  setTimeout(function() { if (_mapC) _mapC.invalidateSize(true); }, 250);
+}
+
+
+function startGPS(){if(!navigator.geolocation){gpsUI("no GPS",false);return;}A.gpsId=navigator.geolocation.watchPosition(p=>{A.pos={lat:p.coords.latitude,lng:p.coords.longitude,acc:p.coords.accuracy,gpsSpeed:p.coords.speed||0};A.gpsReady=p.coords.accuracy<60;gpsUI(p.coords.accuracy<20?"GPS locked":p.coords.accuracy<60?"GPS good":"GPS weak",A.gpsReady);if(A.sess?.on)onMove(A.pos.lat,A.pos.lng);if(A.marker&&A.map)A.marker.setLatLng([A.pos.lat,A.pos.lng]);},()=>gpsUI("GPS off",false),{enableHighAccuracy:true,maximumAge:0,timeout:15000});}
 function stopGPS(){if(A.gpsId!==null){navigator.geolocation.clearWatch(A.gpsId);A.gpsId=null;}}
 function gpsUI(txt,ok){const d=el("gps-dot"),t=el("gps-txt");if(d)d.style.background=ok?"#00ff88":"#ff9500";if(t)t.textContent=txt;}
-async function loadTerritory(){const{data}=await sb.from("territory").select("hex_id,user_id,username").eq("city","Abu Dhabi");if(data){A.allTerritory={};data.forEach(r=>{A.allTerritory[r.hex_id]={user_id:r.user_id,username:r.username};});}}
-async function captureHex(lat,lng){if(!A.user||!A.profile)return false;const id=hid(lat,lng),existing=A.allTerritory[id];if(existing?.user_id===A.user.id)return false;const{error}=await sb.from("territory").upsert({hex_id:id,user_id:A.user.id,username:A.profile.username,city:"Abu Dhabi",captured_at:new Date().toISOString()},{onConflict:"hex_id"});if(!error){A.allTerritory[id]={user_id:A.user.id,username:A.profile.username};A.sess.secs++;A.daily++;flashCap(A.sess.secs);return true;}return false;}
-function startRT(){A.territoryCh=sb.channel("territory_changes").on("postgres_changes",{event:"*",schema:"public",table:"territory"},payload=>{const row=payload.new;if(!row)return;const prev=A.allTerritory[row.hex_id];A.allTerritory[row.hex_id]={user_id:row.user_id,username:row.username};if(prev?.user_id===A.user?.id&&row.user_id!==A.user?.id)showToast(`${row.username} took your sector!`);}).subscribe();}
+async function loadTerritory(){const{data}=await sb.from("territory").select("hex_id,user_id,username,mode").eq("city","Abu Dhabi");if(data){A.allTerritory={};data.forEach(r=>{A.allTerritory[r.hex_id]={user_id:r.user_id,username:r.username,mode:r.mode||"run"};});}}
+async function captureHex(lat,lng,activity){
+  if(!A.user||!A.profile)return false;
+  if(A.pos.acc>40)return false;
+  if((A.sess.movingKm||0)<0.015)return false;
+  var captureMode=activity==="cycle"?"cycle":"run";
+  const id=hid(lat,lng),existing=A.allTerritory[id];
+  // Already owned by me in same mode - skip
+  if(existing&&existing.user_id===A.user.id&&existing.mode===captureMode)return false;const{error}=await sb.from("territory").upsert({hex_id:id,user_id:A.user.id,username:A.profile.username,city:"Abu Dhabi",mode:captureMode,captured_at:new Date().toISOString()},{onConflict:"hex_id"});if(!error){A.allTerritory[id]={user_id:A.user.id,username:A.profile.username,mode:captureMode};var mult=checkBountyCapture(id);A.sess.secs+=mult;A.daily+=mult;flashCap(A.sess.secs,mult);
+    playCaptureSound();
+    if(mult>1)playBountySound();
+    // Post to activity feed (throttle - only every 5 captures)
+    if(A.sess.secs%5===0){
+      postActivity('capture','captured sector #'+A.sess.secs+' in '+((A.profile&&A.profile.city)||'the city'));
+    }return true;}return false;}
+function startRT(){A.territoryCh=sb.channel("territory_changes").on("postgres_changes",{event:"*",schema:"public",table:"territory"},payload=>{const row=payload.new;if(!row)return;const prev=A.allTerritory[row.hex_id];A.allTerritory[row.hex_id]={user_id:row.user_id,username:row.username,mode:row.mode||"run"};if(prev?.user_id===A.user?.id&&row.user_id!==A.user?.id)showToast(`${row.username} took your sector!`);}).subscribe();}
 function stopRT(){if(A.territoryCh){sb.removeChannel(A.territoryCh);A.territoryCh=null;}}
 let _pi=null;
 function startPresence(){if(!A.user||!A.profile)return;A.presenceCh=sb.channel("runners",{config:{presence:{key:A.user.id}}}).on("presence",{event:"sync"},()=>{const state=A.presenceCh.presenceState();updateRunners(state);}).subscribe(async s=>{if(s==="SUBSCRIBED")bcast();});clearInterval(_pi);_pi=setInterval(()=>{if(A.sess?.on)bcast();},4000);}
 function bcast(){if(!A.presenceCh||!A.profile)return;A.presenceCh.track({user_id:A.user.id,username:A.profile.username,lat:A.pos.lat,lng:A.pos.lng,running:A.sess?.on||false});}
 function updateRunners(state){if(!A.map)return;Object.entries(state).forEach(([key,prs])=>{const p=prs[0];if(!p||p.user_id===A.user?.id)return;const col=p.running?"#ff2255":"#ff660088";if(A.otherMarkers[p.user_id]){A.otherMarkers[p.user_id].setLatLng([p.lat,p.lng]);}else{const ico=L.divIcon({className:"",html:`<div title="${p.username}" style="width:12px;height:12px;border-radius:50%;background:${col};border:2px solid white"></div>`,iconSize:[12,12],iconAnchor:[6,6]});A.otherMarkers[p.user_id]=L.marker([p.lat,p.lng],{icon:ico}).addTo(A.map);}});const active=new Set(Object.keys(state));Object.keys(A.otherMarkers).forEach(uid=>{if(!active.has(uid)){if(A.map)A.map.removeLayer(A.otherMarkers[uid]);delete A.otherMarkers[uid];}});}
 function stopPresence(){clearInterval(_pi);if(A.presenceCh){sb.removeChannel(A.presenceCh);A.presenceCh=null;}}
-function startRun(){A.sess={on:true,t0:Date.now(),elapsed:0,km:0,plat:A.pos.lat,plng:A.pos.lng,secs:0,cal:0,positions:[[A.pos.lat,A.pos.lng]]};goTo("run");startTick();setTimeout(()=>{try{buildRunMap();}catch(e){console.error(e);}captureHex(A.pos.lat,A.pos.lng);},300);}
+function startRun(){_speedHistory=[];_vehicleWarningShown=false;clearTimeout(_autoSwitchTimer);
+discardSavedSession();
+A.sess={on:false,t0:Date.now(),elapsed:0,km:0,plat:A.pos.lat,plng:A.pos.lng,secs:0,cal:0,positions:[[A.pos.lat,A.pos.lng]],movingKm:0,lastMoveTime:null,paceHistory:[],_lastMoveTs:null};goTo("run");startTick();setTimeout(()=>{try{buildRunMap();}catch(e){console.error(e);}captureHex(A.pos.lat,A.pos.lng);},300);}
 let _tick=null;
-function startTick(){clearInterval(_tick);_tick=setInterval(()=>{if(!A.sess?.on){clearInterval(_tick);return;}A.sess.elapsed=Math.floor((Date.now()-A.sess.t0)/1000);A.sess.cal=calcCal(A.sess.elapsed,A.mode);el("run-timer").textContent=fmt(A.sess.elapsed);el("run-kcal").textContent=`${A.sess.cal} kcal`;},1000);}
-function onMove(lat,lng){const d=hav(A.sess.plat,A.sess.plng,lat,lng);if(d<0.15){A.sess.km+=d;A.sess.plat=lat;A.sess.plng=lng;A.sess.positions.push([lat,lng]);if(A.route&&A.map)A.route.setLatLngs(A.sess.positions);if(A.marker&&A.map){A.marker.setLatLng([lat,lng]);A.map.panTo([lat,lng],{animate:true,duration:.5});}captureHex(lat,lng);el("run-dist").textContent=A.sess.km.toFixed(2);el("run-pace").textContent=pace(A.sess.km,A.sess.elapsed);el("run-secs").textContent=A.sess.secs;}}
+function startTick(){clearInterval(_tick);_tick=setInterval(()=>{if(!A.sess?.on){clearInterval(_tick);return;}A.sess.elapsed=Math.floor((Date.now()-A.sess.t0)/1000);
+    // Calories only from actual distance moved, not time
+    A.sess.cal=calcCalFromDist(A.sess.km||0,A.mode);
+    el("run-timer").textContent=fmt(A.sess.elapsed);
+    el("run-kcal").textContent=`${A.sess.cal} kcal`;
+    // Pace reset if no movement for 8 seconds
+    if(A.sess.lastMoveTime&&(Date.now()-A.sess.lastMoveTime)>8000){
+      el("run-pace").textContent="--";
+    }
+    // Auto-pause detection: no movement for 90 seconds
+    if(A.sess.lastMoveTime&&(Date.now()-A.sess.lastMoveTime)>90000){
+      const pp=el("run-pace");if(pp)pp.textContent="paused";
+    }},1000);}
+// ══════════════════════════════════════════════════════
+//  OFFLINE COUNTRY DETECTION — no API required
+//  Uses bounding boxes for all countries
+//  Covers GCC + major countries comprehensively
+// ══════════════════════════════════════════════════════
+
+var COUNTRY_BOXES = [
+  // [code, name, minLat, maxLat, minLng, maxLng]
+  // GCC first (highest priority for your user base)
+  ['AE','UAE',22.6,26.2,51.5,56.4],
+  ['SA','Saudi Arabia',16.4,32.2,34.6,55.7],
+  ['QA','Qatar',24.5,26.2,50.7,51.7],
+  ['KW','Kuwait',28.5,30.1,46.5,48.5],
+  ['BH','Bahrain',25.8,26.4,50.3,50.8],
+  ['OM','Oman',16.6,26.4,51.9,59.9],
+  ['YE','Yemen',12.1,19.0,41.0,54.6],
+  ['IQ','Iraq',29.1,38.0,38.8,48.8],
+  ['JO','Jordan',29.2,33.4,34.9,39.3],
+  ['LB','Lebanon',33.1,34.7,35.1,36.6],
+  ['SY','Syria',32.3,37.3,35.7,42.4],
+  ['IL','Israel',29.5,33.3,34.3,35.9],
+  ['TR','Turkey',35.8,42.1,26.0,44.8],
+  // South Asia
+  ['IN','India',6.7,35.7,68.2,97.4],
+  ['PK','Pakistan',23.7,36.9,60.9,77.8],
+  ['BD','Bangladesh',20.7,26.6,88.0,92.7],
+  ['LK','Sri Lanka',5.9,9.9,79.7,81.9],
+  ['NP','Nepal',26.4,30.4,80.1,88.2],
+  // Southeast Asia
+  ['MY','Malaysia',0.9,7.4,99.6,119.3],
+  ['SG','Singapore',1.2,1.5,103.6,104.1],
+  ['ID','Indonesia',-11.0,6.1,95.0,141.0],
+  ['PH','Philippines',4.6,21.1,116.9,126.6],
+  ['TH','Thailand',5.6,20.5,97.3,105.6],
+  ['VN','Vietnam',8.4,23.4,102.1,109.5],
+  // East Asia
+  ['CN','China',18.2,53.6,73.5,134.8],
+  ['JP','Japan',24.2,45.5,122.9,153.9],
+  ['KR','South Korea',33.1,38.6,124.6,130.9],
+  ['HK','Hong Kong',22.1,22.6,113.8,114.5],
+  // Middle East / Africa
+  ['EG','Egypt',22.0,31.7,24.7,37.1],
+  ['MA','Morocco',27.7,35.9,-13.2,2.0],
+  ['NG','Nigeria',4.3,13.9,2.7,14.7],
+  ['ZA','South Africa',-34.8,-22.1,16.5,32.9],
+  ['KE','Kenya',-4.7,4.6,33.9,42.0],
+  ['ET','Ethiopia',3.4,15.0,33.0,48.0],
+  ['GH','Ghana',4.7,11.2,-3.3,1.2],
+  ['TZ','Tanzania',-11.7,-1.0,29.3,40.4],
+  // Europe
+  ['GB','UK',49.9,60.9,-8.6,1.8],
+  ['DE','Germany',47.3,55.1,5.9,15.0],
+  ['FR','France',41.3,51.1,-5.1,9.6],
+  ['IT','Italy',36.6,47.1,6.6,18.5],
+  ['ES','Spain',36.0,43.8,-9.3,4.3],
+  ['PT','Portugal',37.0,42.2,-9.5,-6.2],
+  ['NL','Netherlands',50.8,53.5,3.4,7.2],
+  ['BE','Belgium',49.5,51.5,2.5,6.4],
+  ['CH','Switzerland',45.8,47.8,5.9,10.5],
+  ['AT','Austria',46.4,49.0,9.5,17.2],
+  ['PL','Poland',49.0,54.9,14.1,24.2],
+  ['SE','Sweden',55.3,69.1,11.1,24.2],
+  ['NO','Norway',57.9,71.2,4.5,31.1],
+  ['DK','Denmark',54.6,57.8,8.1,15.2],
+  ['FI','Finland',59.8,70.1,19.1,31.6],
+  ['RU','Russia',41.2,81.9,19.6,180.0],
+  ['UA','Ukraine',44.4,52.4,22.1,40.2],
+  ['GR','Greece',34.8,41.8,19.4,28.3],
+  ['RO','Romania',43.6,48.3,20.3,29.7],
+  ['CZ','Czech Republic',48.6,51.1,12.1,18.9],
+  ['HU','Hungary',45.7,48.6,16.1,22.9],
+  // Americas
+  ['US','USA',24.5,49.4,-124.8,-66.9],
+  ['CA','Canada',41.7,83.1,-141.0,-52.6],
+  ['MX','Mexico',14.5,32.7,-117.1,-86.7],
+  ['BR','Brazil',-33.8,5.3,-73.9,-34.8],
+  ['AR','Argentina',-55.0,-21.8,-73.6,-53.6],
+  ['CO','Colombia',-4.2,12.5,-79.0,-66.9],
+  ['CL','Chile',-55.9,-17.5,-75.7,-66.4],
+  ['PE','Peru',-18.4,0.0,-81.3,-68.7],
+  ['VE','Venezuela',0.7,12.2,-73.4,-59.8],
+  // Oceania
+  ['AU','Australia',-43.6,-10.0,113.2,153.6],
+  ['NZ','New Zealand',-46.6,-34.4,166.4,178.6],
+];
+
+function countryCodeToFlag(code) {
+  if (!code || code.length !== 2) return '';
+  var c1 = code.toUpperCase().charCodeAt(0) - 65 + 0x1F1E6;
+  var c2 = code.toUpperCase().charCodeAt(1) - 65 + 0x1F1E6;
+  return String.fromCodePoint(c1) + String.fromCodePoint(c2);
+}
+
+function detectCountryFromCoords(lat, lng) {
+  for (var i = 0; i < COUNTRY_BOXES.length; i++) {
+    var b = COUNTRY_BOXES[i];
+    if (lat >= b[2] && lat <= b[3] && lng >= b[4] && lng <= b[5]) {
+      return { code: b[0], name: b[1], flag: countryCodeToFlag(b[0]) };
+    }
+  }
+  return null;
+}
+
+// Default city suggestions per country code
+var COUNTRY_CITIES = {
+  'AE':['Abu Dhabi','Dubai','Sharjah','Al Ain','Ajman'],
+  'SA':['Riyadh','Jeddah','Mecca','Medina','Dammam'],
+  'QA':['Doha','Al Wakrah','Al Khor'],
+  'KW':['Kuwait City','Salmiya','Hawalli'],
+  'BH':['Manama','Riffa','Muharraq'],
+  'OM':['Muscat','Salalah','Sohar'],
+  'IN':['Mumbai','Delhi','Bangalore','Hyderabad','Chennai','Kolkata','Pune'],
+  'GB':['London','Manchester','Birmingham','Glasgow','Liverpool'],
+  'US':['New York','Los Angeles','Chicago','Houston','Miami'],
+  'AU':['Sydney','Melbourne','Brisbane','Perth','Adelaide'],
+  'CA':['Toronto','Vancouver','Montreal','Calgary','Ottawa'],
+  'DE':['Berlin','Munich','Hamburg','Frankfurt','Cologne'],
+  'FR':['Paris','Lyon','Marseille','Toulouse','Nice'],
+  'PK':['Karachi','Lahore','Islamabad','Rawalpindi','Faisalabad'],
+  'BD':['Dhaka','Chittagong','Sylhet'],
+  'NG':['Lagos','Abuja','Port Harcourt','Kano'],
+  'KE':['Nairobi','Mombasa','Kisumu'],
+  'ZA':['Johannesburg','Cape Town','Durban','Pretoria'],
+};
+
+function getCitySuggestions(countryCode) {
+  return COUNTRY_CITIES[countryCode] || [];
+}
+
+// Main detection function called on signup screen load
+function detectAndFillLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(function(pos) {
+    var lat = pos.coords.latitude;
+    var lng = pos.coords.longitude;
+    var result = detectCountryFromCoords(lat, lng);
+    if (!result) return;
+
+    var countryEl = el('su-country');
+    var cityEl = el('su-city');
+    var detectWrap = el('su-detect-wrap');
+    var detectText = el('su-detect-text');
+    var detectFlag = el('su-detect-flag');
+
+    if (detectFlag) detectFlag.textContent = result.flag;
+    if (detectText) detectText.textContent = result.name;
+    if (detectWrap) detectWrap.style.display = 'flex';
+
+    // Pre-fill hidden values
+    if (countryEl) countryEl.value = result.name;
+    _detectedCountryCode = result.code;
+    _detectedCountryFlag = result.flag;
+    // Detect emirate/state
+    var emirate = detectEmirateFromCoords(lat, lng, result.code);
+    if (emirate) {
+      var emEl = document.getElementById('su-emirate');
+      if (emEl) emEl.value = emirate;
+      _detectedEmirate = emirate;
+    }
+
+    // Suggest first city
+    var cities = getCitySuggestions(result.code);
+    if (cityEl && cities.length > 0) cityEl.placeholder = cities[0];
+
+  }, function() {}, { timeout: 8000, maximumAge: 60000 });
+}
+
+var _detectedCountryCode = '';
+var _detectedCountryFlag = '';
+var _detectedEmirate = '';
+var _locationConfirmed = false;
+
+function confirmLocation() {
+  _locationConfirmed = true;
+  var wrap = el('su-detect-wrap');
+  if (wrap) wrap.style.display = 'none';
+  var confirmed = el('su-confirmed-wrap');
+  if (confirmed) confirmed.style.display = 'flex';
+}
+
+function changeLocation() {
+  var wrap = el('su-detect-wrap');
+  if (wrap) wrap.style.display = 'none';
+  var manualWrap = el('su-manual-wrap');
+  if (manualWrap) manualWrap.style.display = 'flex';
+  _locationConfirmed = false;
+}
+
+
+// ══════════════════════════════════════════════════════
+//  V6 FEATURES: Open Challenge + City King + Bounties + Fog of War
+// ══════════════════════════════════════════════════════
+
+// ── SPEED THRESHOLD UPDATE ──
+var SPEED_VEHICLE_THRESHOLD = 38;  // km/h sustained
+var SPEED_VEHICLE_SUSTAIN_MS = 8000; // 8 seconds
+var _vehicleSpeedStart = null;
+
+function checkVehicleSpeed(kmh) {
+  if (kmh >= SPEED_VEHICLE_THRESHOLD) {
+    if (!_vehicleSpeedStart) _vehicleSpeedStart = Date.now();
+    if (Date.now() - _vehicleSpeedStart >= SPEED_VEHICLE_SUSTAIN_MS) {
+      return true; // confirmed vehicle
+    }
+  } else {
+    _vehicleSpeedStart = null;
+  }
+  return false;
+}
+
+// ── OPEN FOR CHALLENGE TOGGLE ──
+async function toggleOpenForChallenge() {
+  if (!A.user || !A.profile) return;
+  var newVal = !A.profile.open_for_challenge;
+  A.profile.open_for_challenge = newVal;
+  try {
+    await sb.from('profiles').update({ open_for_challenge: newVal }).eq('id', A.user.id);
+    updateOpenChallengeUI();
+    showToast(newVal ? 'You are now open for challenges!' : 'Challenge mode off', true);
+  } catch(e) {
+    A.profile.open_for_challenge = !newVal;
+    console.error(e);
+  }
+}
+
+function updateOpenChallengeUI() {
+  var btn = el('open-challenge-btn');
+  var dot = el('open-challenge-dot');
+  if (!btn) return;
+  var isOpen = A.profile && A.profile.open_for_challenge;
+  btn.textContent = isOpen ? 'OPEN FOR CHALLENGE' : 'CLOSED FOR CHALLENGE';
+  btn.style.background = isOpen ? 'linear-gradient(135deg,var(--rd),#ff6600)' : 'var(--sf)';
+  btn.style.color = isOpen ? '#fff' : 'var(--ht)';
+  btn.style.borderColor = isOpen ? 'var(--rd)' : 'var(--bd)';
+  if (dot) { dot.style.background = isOpen ? '#ff2255' : '#888'; dot.style.boxShadow = isOpen ? '0 0 8px #ff2255' : 'none'; }
+}
+
+// ── CHALLENGE HUB ──
+var _challengeHubFilter = 'global';
+
+async function loadChallengeHub(filter) {
+  _challengeHubFilter = filter || 'global';
+  var list = el('hub-list');
+  var tabs = document.querySelectorAll('.hub-tab');
+  tabs.forEach(function(t) { t.classList.toggle('on', t.dataset.filter === _challengeHubFilter); });
+  if (list) list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';
+
+  try {
+    var query = sb.from('profiles').select('id,username,city,country,total_sectors,total_runs,total_km,gender,avatar_url,open_for_challenge')
+      .eq('open_for_challenge', true)
+      .neq('id', A.user ? A.user.id : '')
+      .order('total_sectors', { ascending: false })
+      .limit(40);
+
+    if (_challengeHubFilter === 'city' && A.profile && A.profile.city) {
+      query = query.eq('city', A.profile.city);
+    } else if (_challengeHubFilter === 'country' && A.profile && A.profile.country) {
+      query = query.eq('country', A.profile.country);
+    } else if (_challengeHubFilter === 'nearby' && A.pos) {
+      // Fallback to city for "nearby"
+      if (A.profile && A.profile.city) query = query.eq('city', A.profile.city);
+    }
+
+    var res = await query;
+    if (!list) return;
+    if (!res.data || res.data.length === 0) {
+      list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No open challengers right now.<br><br><span style="color:var(--cy);font-size:12px">Toggle your status to join the list!</span></div>';
+      return;
+    }
+    list.innerHTML = res.data.map(function(p) {
+      var gIcon = p.gender === 'male' ? '<span style="color:#4a9eff;font-size:10px">\u2642</span>' : p.gender === 'female' ? '<span style="color:#ff6eb0;font-size:10px">\u2640</span>' : '';
+      var av = p.avatar_url
+        ? '<img src="' + p.avatar_url + '" style="width:40px;height:40px;border-radius:50%;object-fit:cover;border:1.5px solid var(--rd)" alt="avatar"/>'
+        : '<div style="width:40px;height:40px;border-radius:50%;background:rgba(255,34,85,0.15);border:1.5px solid var(--rd);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--rd)">' + (p.username ? p.username.charAt(0).toUpperCase() : '?') + '</div>';
+      return '<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:.5px solid var(--bd);cursor:pointer" onclick="viewProfile(\'' + p.id + '\')">'
+        + av
+        + '<div style="flex:1">'
+        + '<div style="font-size:13px;font-weight:600">' + (flagIcon||'') + (p.username || '—') + ' ' + gIcon + '</div>'
+        + '<div style="font-size:10px;color:var(--ht);margin-top:2px">' + (p.city || '') + (p.country ? ', ' + p.country : '') + '</div>'
+        + '</div>'
+        + '<div style="text-align:right">'
+        + '<div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--rd)">' + (p.total_sectors || 0) + '</div>'
+        + '<div style="font-size:9px;color:var(--ht)">sectors</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  } catch(e) {
+    if (list) list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';
+    console.error(e);
+  }
+}
+
+// ── CITY KING ──
+var _cityKing = null;
+
+async function loadCityKing() {
+  try {
+    var res = await sb.from('profiles').select('id,username,total_sectors,avatar_url').order('total_sectors', { ascending: false }).limit(1).single();
+    if (res.data) {
+      _cityKing = res.data;
+      updateCityKingUI();
+    }
+  } catch(e) {}
+}
+
+function updateCityKingUI() {
+  var el1 = el('city-king-name');
+  var el2 = el('city-king-sectors');
+  var wrap = el('city-king-wrap');
+  if (!_cityKing) return;
+  var isMe = A.user && _cityKing.id === A.user.id;
+  if (el1) el1.textContent = isMe ? 'You are City King!' : _cityKing.username;
+  if (el2) el2.textContent = (_cityKing.total_sectors || 0) + ' sectors';
+  if (wrap) wrap.style.display = 'flex';
+}
+
+// ── DAILY BOUNTIES ──
+var _dailyBounties = [];
+var _bountyCaptures = new Set();
+
+async function loadDailyBounties() {
+  var today = new Date().toDateString();
+  try {
+    var res = await sb.from('daily_bounties').select('hex_ids').eq('date_str', today).single();
+    if (res.data && res.data.hex_ids && res.data.hex_ids.length > 0) {
+      _dailyBounties = res.data.hex_ids;
+    } else {
+      // Generate 3 bounty hexes around user's area
+      _dailyBounties = generateDailyBounties(today);
+      // Save to DB
+      await sb.from('daily_bounties').upsert({ date_str: today, hex_ids: _dailyBounties }, { onConflict: 'date_str' });
+    }
+    updateBountyUI();
+  } catch(e) {
+    _dailyBounties = generateDailyBounties(today);
+  }
+}
+
+function generateDailyBounties(dateStr) {
+  // Deterministic generation based on date + user city
+  var seed = 0;
+  for (var i = 0; i < dateStr.length; i++) seed += dateStr.charCodeAt(i);
+  var lat = A.pos ? A.pos.lat : 24.4969;
+  var lng = A.pos ? A.pos.lng : 54.4036;
+  var SZ2 = 0.0004;
+  var bounties = [];
+  for (var j = 0; j < 3; j++) {
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    var latOff = ((seed % 100) - 50) * SZ2 * 5;
+    seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+    var lngOff = ((seed % 100) - 50) * SZ2 * 5;
+    var bLat = lat + latOff;
+    var bLng = lng + lngOff;
+    bounties.push(Math.floor(bLat / SZ2) + ':' + Math.floor(bLng / SZ2));
+  }
+  return bounties;
+}
+
+function updateBountyUI() {
+  var wrap = el('bounty-wrap');
+  var list = el('bounty-list');
+  if (!wrap || !list) return;
+  if (_dailyBounties.length === 0) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  var remaining = _dailyBounties.filter(function(h) { return !_bountyCaptures.has(h); }).length;
+  list.textContent = remaining + ' bounty sector' + (remaining !== 1 ? 's' : '') + ' available — 3x points today';
+}
+
+function checkBountyCapture(hexId) {
+  if (_dailyBounties.indexOf(hexId) === -1) return 1;
+  if (_bountyCaptures.has(hexId)) return 1;
+  _bountyCaptures.add(hexId);
+  showToast('BOUNTY CAPTURED — 3x points!', true);
+  updateBountyUI();
+  return 3; // multiplier
+}
+
+// ── FOG OF WAR ──
+var _fogExplored = new Set();
+var _fogEnabled = true;
+
+async function loadFogExplored() {
+  if (!A.user) return;
+  try {
+    var res = await sb.from('fog_explored').select('hex_id').eq('user_id', A.user.id);
+    if (res.data) {
+      res.data.forEach(function(r) { _fogExplored.add(r.hex_id); });
+    }
+  } catch(e) {}
+}
+
+async function markFogExplored(lat, lng) {
+  if (!A.user) return;
+  // Mark current hex and surrounding 1-ring as explored
+  var SZ2 = 0.0004;
+  var r = Math.floor(lat / SZ2);
+  var c = Math.floor(lng / SZ2);
+  var toInsert = [];
+  for (var dr = -2; dr <= 2; dr++) {
+    for (var dc = -2; dc <= 2; dc++) {
+      var hid2 = (r + dr) + ':' + (c + dc);
+      if (!_fogExplored.has(hid2)) {
+        _fogExplored.add(hid2);
+        toInsert.push({ user_id: A.user.id, hex_id: hid2 });
+      }
+    }
+  }
+  if (toInsert.length > 0) {
+    try {
+      await sb.from('fog_explored').upsert(toInsert, { onConflict: 'user_id,hex_id', ignoreDuplicates: true });
+    } catch(e) {}
+  }
+}
+
+function drawFogOfWar(ctx, cvs, map) {
+  if (!ctx || !cvs || !map || !_fogEnabled) return;
+  var w = cvs.width;
+  var h = cvs.height;
+
+  // Save current canvas state
+  ctx.save();
+
+  // Draw dark fog over everything
+  ctx.fillStyle = 'rgba(6,6,9,0.82)';
+  ctx.fillRect(0, 0, w, h);
+
+  // Use destination-out to punch holes where explored
+  ctx.globalCompositeOperation = 'destination-out';
+
+  var b = map.getBounds();
+  var pad = 0.0004 * 4;
+  var z = map.getZoom();
+  var px = Math.max(5, Math.min(16, (z - 12) * 4));
+
+  // Reveal explored hexes
+  _fogExplored.forEach(function(hid2) {
+    var parts = hid2.split(':');
+    var r = parseFloat(parts[0]);
+    var c = parseFloat(parts[1]);
+    var lat = (r + 0.5) * 0.0004;
+    var lng = (c + 0.5) * 0.0004;
+    if (lat < b.getSouth() - pad || lat > b.getNorth() + pad) return;
+    if (lng < b.getWest() - pad || lng > b.getEast() + pad) return;
+    var p = map.latLngToContainerPoint([lat, lng]);
+    ctx.beginPath();
+    for (var i = 0; i < 6; i++) {
+      var angle = (Math.PI / 3) * i - Math.PI / 6;
+      var x = p.x + (px + 2) * Math.cos(angle);
+      var y = p.y + (px + 2) * Math.sin(angle);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(0,0,0,1)';
+    ctx.fill();
+  });
+
+  ctx.restore();
+}
+
+// ── ACHIEVEMENTS ENGINE ──
+function getAchievements(profile) {
+  if (!profile) return [];
+  var achievements = [];
+  var sectors = profile.total_sectors || 0;
+  var km = parseFloat(profile.total_km || 0);
+  var runs = profile.total_runs || 0;
+  var wins = profile.challenge_wins || 0;
+  var challenges = profile.total_challenges || 0;
+
+  if (sectors >= 1)    achievements.push({ icon: '\u2B21', label: 'First Sector', desc: 'Captured your first territory' });
+  if (sectors >= 10)   achievements.push({ icon: '\u2605', label: 'Territory Rookie', desc: '10 sectors captured' });
+  if (sectors >= 50)   achievements.push({ icon: '\uD83C\uDFD9', label: 'City Explorer', desc: '50 sectors captured' });
+  if (sectors >= 100)  achievements.push({ icon: '\uD83D\uDC51', label: 'District Ruler', desc: '100 sectors captured' });
+  if (sectors >= 500)  achievements.push({ icon: '\uD83D\uDC51', label: 'City King', desc: '500 sectors — true ruler' });
+  if (km >= 5)         achievements.push({ icon: '\uD83C\uDFC3', label: 'First 5K', desc: '5km total distance' });
+  if (km >= 21)        achievements.push({ icon: '\uD83C\uDFC5', label: 'Half Marathon', desc: '21km total' });
+  if (km >= 42)        achievements.push({ icon: '\uD83D\uDE80', label: 'Marathon', desc: '42km total' });
+  if (km >= 100)       achievements.push({ icon: '\uD83D\uDD25', label: 'Century', desc: '100km total' });
+  if (runs >= 5)       achievements.push({ icon: '\uD83D\uDCC5', label: 'Regular Runner', desc: '5 sessions completed' });
+  if (runs >= 30)      achievements.push({ icon: '\uD83D\uDCC6', label: 'Committed', desc: '30 sessions completed' });
+  if (challenges >= 1) achievements.push({ icon: '\u2694', label: 'First Challenge', desc: 'Entered a race challenge' });
+  if (wins >= 1)       achievements.push({ icon: '\uD83C\uDFC6', label: 'Winner', desc: 'Won a challenge' });
+  if (wins >= 5)       achievements.push({ icon: '\uD83D\uDD1D', label: 'Champion', desc: '5 challenge wins' });
+  return achievements;
+}
+
+function renderAchievements(profile, containerId) {
+  var c = el(containerId);
+  if (!c) return;
+  var list = getAchievements(profile);
+  if (list.length === 0) {
+    c.innerHTML = '<div style="font-size:12px;color:var(--ht);text-align:center;padding:12px">No achievements yet — start running!</div>';
+    return;
+  }
+  c.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 0">'
+    + list.map(function(a) {
+      return '<div style="display:flex;align-items:center;gap:6px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);padding:7px 10px;font-size:12px">'
+        + '<span style="font-size:16px">' + a.icon + '</span>'
+        + '<div><div style="font-weight:600;font-size:11px">' + a.label + '</div>'
+        + '<div style="font-size:10px;color:var(--ht)">' + a.desc + '</div></div>'
+        + '</div>';
+    }).join('')
+    + '</div>';
+}
+
+
+// ══════════════════════════════════════════════════════
+//  V7 PART 1: EMIRATE DETECTION + TITLES + SEASON
+// ══════════════════════════════════════════════════════
+
+var EMIRATE_BOXES = [
+  ['Abu Dhabi Emirate','AE',22.6,24.5,51.5,56.5],
+  ['Dubai','AE',24.8,25.4,54.9,55.6],
+  ['Sharjah','AE',25.2,25.5,55.3,56.4],
+  ['Ajman','AE',25.3,25.5,55.4,55.6],
+  ['Umm Al Quwain','AE',25.5,25.7,55.5,55.8],
+  ['Ras Al Khaimah','AE',25.6,26.1,55.7,56.3],
+  ['Fujairah','AE',25.0,25.4,56.2,56.5],
+  // UK regions
+  ['England','GB',49.9,55.8,-5.7,1.8],
+  ['Scotland','GB',55.0,60.9,-7.6,1.8],
+  ['Wales','GB',51.3,53.4,-5.3,-2.6],
+  ['Northern Ireland','GB',54.0,55.3,-8.2,-5.4],
+  // India states (major)
+  ['Maharashtra','IN',15.6,22.1,72.6,80.9],
+  ['Delhi','IN',28.4,28.9,76.8,77.4],
+  ['Karnataka','IN',11.6,18.4,74.1,78.6],
+  ['Tamil Nadu','IN',8.1,13.6,76.2,80.3],
+  ['Gujarat','IN',20.1,24.7,68.2,74.5],
+  ['Punjab','IN',29.5,32.5,73.9,76.9],
+  ['UP','IN',23.9,30.4,77.1,84.6],
+  // Pakistan
+  ['Punjab Pakistan','PK',27.7,34.0,69.3,75.4],
+  ['Sindh','PK',23.7,28.5,66.7,71.1],
+  ['KPK','PK',31.1,36.9,69.3,74.1],
+  // Saudi regions
+  ['Riyadh Region','SA',21.3,27.0,43.5,50.0],
+  ['Makkah Region','SA',18.3,23.0,38.5,43.5],
+  ['Eastern Province','SA',24.0,32.2,47.0,55.7],
+  // US states (major)
+  ['New York State','US',40.5,45.0,-79.8,-71.9],
+  ['California','US',32.5,42.0,-124.4,-114.1],
+  ['Texas','US',25.8,36.5,-106.6,-93.5],
+  ['Florida','US',24.4,31.0,-87.6,-80.0],
+  // Australia states
+  ['New South Wales','AU',-37.5,-28.2,140.9,153.6],
+  ['Victoria','AU',-39.2,-34.0,140.9,150.0],
+  ['Queensland','AU',-29.2,-10.7,138.0,153.6],
+];
+
+function detectEmirateFromCoords(lat, lng, countryCode) {
+  for (var i = 0; i < EMIRATE_BOXES.length; i++) {
+    var b = EMIRATE_BOXES[i];
+    if (b[1] === countryCode && lat >= b[2] && lat <= b[3] && lng >= b[4] && lng <= b[5]) {
+      return b[0];
+    }
+  }
+  return '';
+}
+
+// ── TITLES ──
+function getTitle(gender, tier) {
+  var g = gender === 'female' ? 'f' : 'm';
+  var titles = {
+    city:     { m: 'City King',           f: 'City Queen' },
+    emirate:  { m: 'Provincial Warlord',  f: 'Provincial Warrior' },
+    country:  { m: 'National Commander',  f: 'National Commander' },
+    global:   { m: 'World Dominator',     f: 'World Dominator' }
+  };
+  return (titles[tier] && titles[tier][g]) || 'Champion';
+}
+
+function getTitleIcon(tier) {
+  var icons = { city: '👑', emirate: '⚔️', country: '🎖️', global: '🌐' };
+  return icons[tier] || '🏆';
+}
+
+// ── SEASON / MONTHLY RESET ──
+function getCurrentSeason() {
+  var d = new Date();
+  var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  return months[d.getMonth()] + ' ' + d.getFullYear();
+}
+
+function getDaysLeftInMonth() {
+  var now = new Date();
+  var lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return lastDay - now.getDate();
+}
+
+function checkSeasonReset() {
+  var season = getCurrentSeason();
+  var stored = localStorage.getItem('chase_season');
+  if (stored && stored !== season) {
+    // New month — show hall of fame notification
+    showToast('New season started! Check Hall of Fame', true);
+    localStorage.setItem('chase_season', season);
+    // Reset local daily counter
+    localStorage.removeItem('chase_daily');
+  } else if (!stored) {
+    localStorage.setItem('chase_season', season);
+  }
+}
+
+function getSeasonBanner() {
+  var days = getDaysLeftInMonth();
+  if (days <= 7) return days === 0 ? 'LAST DAY of season!' : days + ' days left in season!';
+  return null;
+}
+
+// ── MILITARY TROPHY RENDER ──
+function getTrophyHTML(hof) {
+  var icon = getTitleIcon(hof.tier);
+  var color = hof.tier === 'global' ? '#00f0ff' : hof.tier === 'country' ? '#ffd700' : hof.tier === 'emirate' ? '#ff9500' : '#c0c0c0';
+  return '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.03);border:.5px solid rgba(255,255,255,0.08);border-radius:var(--rs);margin-bottom:8px">'
+    + '<div style="font-size:22px">' + icon + '</div>'
+    + '<div style="flex:1">'
+    + '<div style="font-size:12px;font-weight:700;color:' + color + '">' + hof.title + '</div>'
+    + '<div style="font-size:10px;color:var(--ht);margin-top:2px">' + hof.season + ' · ' + (hof.sectors || 0) + ' sectors</div>'
+    + '</div>'
+    + '<div style="font-size:10px;color:var(--ht)">' + (hof.city || hof.emirate || hof.country || '') + '</div>'
+    + '</div>';
+}
+
+// ── HALL OF FAME ──
+async function loadHallOfFame(containerId) {
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  c.innerHTML = '<div style="font-size:12px;color:var(--ht);text-align:center;padding:16px">Loading...</div>';
+  try {
+    var res = await sb.from('hall_of_fame').select('*').order('created_at', { ascending: false }).limit(20);
+    if (!res.data || res.data.length === 0) {
+      c.innerHTML = '<div style="font-size:12px;color:var(--ht);text-align:center;padding:16px">No Hall of Fame entries yet.<br>Season ends ' + getDaysLeftInMonth() + ' days from now.</div>';
+      return;
+    }
+    c.innerHTML = res.data.map(function(h) { return getTrophyHTML(h); }).join('');
+  } catch(e) {
+    c.innerHTML = '<div style="font-size:12px;color:var(--ht);text-align:center;padding:16px">Failed to load</div>';
+  }
+}
+
+// ── MONTHLY LEADERBOARD ──
+async function loadMonthlyLeaderboard(tier, containerId) {
+  var c = document.getElementById(containerId);
+  if (!c || !A.profile) return;
+  var query = sb.from('profiles').select('id,username,gender,city,emirate,country,monthly_sectors,avatar_url').order('monthly_sectors', { ascending: false }).limit(25);
+  if (tier === 'city') query = query.eq('city', A.profile.city || '');
+  else if (tier === 'emirate') query = query.eq('emirate', A.profile.emirate || '');
+  else if (tier === 'country') query = query.eq('country', A.profile.country || '');
+  try {
+    var res = await query;
+    if (!res.data || res.data.length === 0) {
+      c.innerHTML = '<div style="font-size:12px;color:var(--ht);text-align:center;padding:20px">No players yet in this tier</div>';
+      return;
+    }
+    c.innerHTML = res.data.map(function(p, i) {
+      var isMe = p.id === (A.user && A.user.id);
+      var medal = i === 0 ? getTitleIcon(tier) : i === 1 ? '🥈' : i === 2 ? '🥉' : '#' + (i+1);
+      var gIcon = p.gender === 'male' ? '<span style="color:#4a9eff;font-size:10px">♂</span>' : p.gender === 'female' ? '<span style="color:#ff6eb0;font-size:10px">♀</span>' : '';
+      var flag = p.country ? (function() { var cc = getCountryCode(p.country || ''); return cc ? countryCodeToFlag(cc) + ' ' : ''; })() : '';
+      return '<div style="display:flex;align-items:center;gap:10px;padding:11px 20px;border-bottom:.5px solid var(--bd);cursor:pointer' + (isMe ? ';background:rgba(0,240,255,0.04)' : '') + '" onclick="viewProfile(\'' + p.id + '\')">'
+        + '<div style="min-width:28px;font-size:' + (i < 3 ? '18' : '13') + 'px;font-weight:700;color:var(--ht)">' + medal + '</div>'
+        + '<div style="width:32px;height:32px;border-radius:50%;background:var(--cyd);border:1.5px solid var(--cy);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--cy);flex-shrink:0">' + (p.username || '?').charAt(0).toUpperCase() + '</div>'
+        + '<div style="flex:1"><div style="font-size:13px;font-weight:600">' + flag + (p.username || '—') + ' ' + gIcon + (isMe ? ' <span style="font-size:10px;color:var(--cy)">(you)</span>' : '') + '</div>'
+        + '<div style="font-size:10px;color:var(--ht)">' + (p.city || '') + (i === 0 ? ' · ' + getTitle(p.gender, tier) : '') + '</div></div>'
+        + '<div style="text-align:right"><div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--cy)">' + (p.monthly_sectors || 0) + '</div><div style="font-size:9px;color:var(--ht)">this month</div></div>'
+        + '</div>';
+    }).join('');
+  } catch(e) { console.error(e); }
+}
+
+
+// ══════════════════════════════════════════════════════
+//  V7 PART 2: COUNTDOWN + SOUND + PAUSE/RESUME + SETTINGS
+// ══════════════════════════════════════════════════════
+
+// ── SETTINGS ──
+var _settings = { sound: true, vibrate: true };
+
+async function loadSettings() {
+  try {
+    var res = await sb.from('user_settings').select('*').eq('user_id', A.user.id).single();
+    if (res.data) {
+      _settings.sound = res.data.sound_enabled !== false;
+      _settings.vibrate = res.data.vibrate_enabled !== false;
+    }
+  } catch(e) {
+    var s = localStorage.getItem('chase_settings');
+    if (s) { try { _settings = JSON.parse(s); } catch(_) {} }
+  }
+}
+
+async function saveSetting(key, val) {
+  _settings[key] = val;
+  localStorage.setItem('chase_settings', JSON.stringify(_settings));
+  try {
+    var update = {};
+    if (key === 'sound') update.sound_enabled = val;
+    if (key === 'vibrate') update.vibrate_enabled = val;
+    await sb.from('user_settings').upsert({ user_id: A.user.id, ...update });
+  } catch(e) {}
+  updateSettingsUI();
+}
+
+function updateSettingsUI() {
+  var sndEl = document.getElementById('set-sound');
+  var vibEl = document.getElementById('set-vibrate');
+  if (sndEl) sndEl.checked = _settings.sound;
+  if (vibEl) vibEl.checked = _settings.vibrate;
+}
+
+function openSettings() {
+  var p = document.getElementById('settings-panel');
+  if (!p) return;
+  updateSettingsUI();
+  // Fill profile info
+  if (A.profile) {
+    var un = document.getElementById('set-username'); if (un) un.textContent = A.profile.username || '—';
+    var ct = document.getElementById('set-city-val'); if (ct) ct.textContent = A.profile.city || '—';
+    var em = document.getElementById('set-emirate-val'); if (em) em.textContent = A.profile.emirate || '—';
+    var co = document.getElementById('set-country-val'); if (co) co.textContent = A.profile.country || '—';
+  }
+  p.classList.add('open');
+}
+
+function closeSettings() {
+  var p = document.getElementById('settings-panel');
+  if (p) p.classList.remove('open');
+}
+
+// ── SOUND ENGINE (Web Audio API — no files needed) ──
+var _audioCtx = null;
+
+function getAudioCtx() {
+  if (!_audioCtx) {
+    try { _audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  }
+  return _audioCtx;
+}
+
+function playBeep(freq, duration, type, vol) {
+  if (!_settings.sound) return;
+  var ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(vol || 0.4, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration);
+  } catch(e) {}
+}
+
+function doVibrate(pattern) {
+  if (!_settings.vibrate) return;
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch(e) {}
+}
+
+function playCountdownBeep(n) {
+  if (n > 0) {
+    playBeep(440, 0.15, 'square', 0.35);
+    doVibrate(80);
+  } else {
+    // GO — long high beep
+    playBeep(880, 0.5, 'sine', 0.5);
+    playBeep(1100, 0.4, 'sine', 0.3);
+    doVibrate([100, 50, 200]);
+  }
+}
+
+function playCaptureSound() {
+  playBeep(660, 0.1, 'sine', 0.25);
+  setTimeout(function() { playBeep(880, 0.15, 'sine', 0.2); }, 100);
+  doVibrate(60);
+}
+
+function playBountySound() {
+  playBeep(660, 0.1, 'sine', 0.3);
+  setTimeout(function() { playBeep(880, 0.1, 'sine', 0.3); }, 120);
+  setTimeout(function() { playBeep(1100, 0.25, 'sine', 0.3); }, 240);
+  doVibrate([80, 40, 80, 40, 120]);
+}
+
+// ── COUNTDOWN ──
+var _countdownActive = false;
+
+function startCountdown(onComplete) {
+  if (_countdownActive) return;
+  _countdownActive = true;
+
+  var overlay = document.getElementById('countdown-overlay');
+  var num = document.getElementById('countdown-num');
+  if (overlay) overlay.style.display = 'flex';
+
+  var count = 5;
+
+  function tick() {
+    if (num) {
+      num.textContent = count > 0 ? count : 'GO!';
+      num.style.color = count > 0 ? '#fff' : '#00f0ff';
+      num.style.transform = 'scale(1.3)';
+      setTimeout(function() { if (num) num.style.transform = 'scale(1)'; }, 150);
+    }
+    playCountdownBeep(count);
+
+    if (count === 0) {
+      setTimeout(function() {
+        _countdownActive = false;
+        if (overlay) overlay.style.display = 'none';
+        onComplete();
+      }, 600);
+      return;
+    }
+    count--;
+    setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+// ── PAUSE / RESUME ──
+function pauseRun() {
+  if (!A.sess || !A.sess.on) return;
+  A.sess.on = false;
+  A.sess.pausedAt = Date.now();
+  clearInterval(_tick);
+  stopAnim();
+  var pauseBtn = document.getElementById('pause-btn');
+  var resumeBtn = document.getElementById('resume-btn');
+  if (pauseBtn) pauseBtn.style.display = 'none';
+  if (resumeBtn) resumeBtn.style.display = 'flex';
+  var liveEl = document.getElementById('run-live-label');
+  if (liveEl) { liveEl.textContent = 'PAUSED'; liveEl.style.color = '#ff9500'; }
+  doVibrate([100, 50, 100]);
+}
+
+function resumeRun() {
+  if (!A.sess || A.sess.on) return;
+  // Adjust t0 for time paused
+  if (A.sess.pausedAt) {
+    var pauseDuration = Date.now() - A.sess.pausedAt;
+    A.sess.t0 += pauseDuration;
+    A.sess.pausedAt = null;
+  }
+  A.sess.on = true;
+  startTick();
+  runAnim();
+  var pauseBtn = document.getElementById('pause-btn');
+  var resumeBtn = document.getElementById('resume-btn');
+  if (pauseBtn) pauseBtn.style.display = 'flex';
+  if (resumeBtn) resumeBtn.style.display = 'none';
+  var liveEl = document.getElementById('run-live-label');
+  if (liveEl) { liveEl.textContent = 'LIVE'; liveEl.style.color = '#ff2255'; }
+  doVibrate([80, 40, 200]);
+}
+
+// ── SESSION PERSISTENCE (survive phone calls / backgrounding) ──
+function saveSessionState() {
+  if (!A.sess) return;
+  try {
+    localStorage.setItem('chase_active_sess', JSON.stringify({
+      on: false, // paused on save
+      t0: A.sess.t0,
+      elapsed: A.sess.elapsed,
+      km: A.sess.km,
+      plat: A.sess.plat,
+      plng: A.sess.plng,
+      secs: A.sess.secs,
+      cal: A.sess.cal,
+      mode: A.mode,
+      movingKm: A.sess.movingKm || 0,
+      savedAt: Date.now()
+    }));
+  } catch(e) {}
+}
+
+function restoreSessionState() {
+  try {
+    var raw = localStorage.getItem('chase_active_sess');
+    if (!raw) return false;
+    var s = JSON.parse(raw);
+    // Only restore if saved less than 2 hours ago
+    if (Date.now() - s.savedAt > 7200000) {
+      localStorage.removeItem('chase_active_sess');
+      return false;
+    }
+    // Show resume banner
+    var banner = document.getElementById('resume-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      document.getElementById('resume-banner-dist').textContent = parseFloat(s.km || 0).toFixed(2) + 'km · ' + (s.secs || 0) + ' sectors';
+    }
+    window._savedSess = s;
+    return true;
+  } catch(e) { return false; }
+}
+
+function resumeSavedSession() {
+  var s = window._savedSess;
+  if (!s) return;
+  localStorage.removeItem('chase_active_sess');
+  var banner = document.getElementById('resume-banner');
+  if (banner) banner.style.display = 'none';
+  // Restore mode
+  if (s.mode) { A.mode = s.mode; updateModeButtons(); }
+  // Adjust t0 for time away
+  var awayTime = Date.now() - s.savedAt;
+  A.sess = {
+    on: true,
+    t0: s.t0 + awayTime,
+    elapsed: s.elapsed || 0,
+    km: s.km || 0,
+    plat: s.plat || A.pos.lat,
+    plng: s.plng || A.pos.lng,
+    secs: s.secs || 0,
+    cal: s.cal || 0,
+    positions: [[s.plat || A.pos.lat, s.plng || A.pos.lng]],
+    movingKm: s.movingKm || 0,
+    lastMoveTime: null,
+    paceHistory: [],
+    _lastMoveTs: null
+  };
+  goTo('run');
+  startTick();
+  setTimeout(function() {
+    try { buildRunMap(); } catch(e) {}
+    setTimeout(function(){
+      startCountdown(function(){
+        if(A.sess){A.sess.on=true;}
+      });
+    },350);
+  }, 300);
+  showToast('Session resumed!', true);
+}
+
+function discardSavedSession() {
+  localStorage.removeItem('chase_active_sess');
+  var banner = document.getElementById('resume-banner');
+  if (banner) banner.style.display = 'none';
+  window._savedSess = null;
+}
+
+// Save session state when page hides (phone call, lock screen, etc.)
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden && A.sess && A.sess.on) {
+    saveSessionState();
+    pauseRun();
+  }
+});
+
+// ── ACTIVITY FEED ──
+async function postActivity(type, message) {
+  if (!A.user || !A.profile) return;
+  try {
+    await sb.from('activity_feed').insert({
+      user_id: A.user.id,
+      username: A.profile.username,
+      city: A.profile.city || '',
+      country: A.profile.country || '',
+      type: type,
+      message: message
+    });
+  } catch(e) {}
+}
+
+async function loadActivityFeed(containerId) {
+  var c = document.getElementById(containerId);
+  if (!c) return;
+  try {
+    var res = await sb.from('activity_feed').select('*').order('created_at', { ascending: false }).limit(30);
+    if (!res.data || res.data.length === 0) {
+      c.innerHTML = '<div style="font-size:12px;color:var(--ht);text-align:center;padding:16px">No activity yet. Go run!</div>';
+      return;
+    }
+    c.innerHTML = res.data.map(function(a) {
+      var ago = timeAgo(a.created_at);
+      var flag = a.country ? (function() { var cc = getCountryCode(a.country || ''); return cc ? countryCodeToFlag(cc) + ' ' : ''; })() : '';
+      var icon = a.type === 'capture' ? '⬡' : a.type === 'challenge_win' ? '⚔️' : a.type === 'title_earned' ? '👑' : '🏃';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 20px;border-bottom:.5px solid rgba(255,255,255,0.05)">'
+        + '<div style="font-size:16px;margin-top:2px;flex-shrink:0">' + icon + '</div>'
+        + '<div style="flex:1"><div style="font-size:12px;color:rgba(255,255,255,0.85)">' + flag + '<strong>' + (a.username || '?') + '</strong> ' + a.message + '</div>'
+        + '<div style="font-size:10px;color:var(--ht);margin-top:3px">' + (a.city || '') + ' · ' + ago + '</div></div>'
+        + '</div>';
+    }).join('');
+  } catch(e) {}
+}
+
+function timeAgo(ts) {
+  var diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+  if (diff < 60) return 'just now';
+  if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+  return Math.floor(diff/86400) + 'd ago';
+}
+
+// ── EMOJI REACTIONS ──
+var ATHLETE_EMOJIS = ['🔥','💪','⚡','👑','🏆','😤'];
+
+async function sendEmojiReaction(toUserId, toUsername, emoji) {
+  if (!A.user || !A.profile || toUserId === A.user.id) return;
+  try {
+    await sb.from('reactions').insert({
+      from_user_id: A.user.id,
+      to_user_id: toUserId,
+      from_username: A.profile.username,
+      emoji: emoji
+    });
+    showToast('Sent ' + emoji + ' to ' + toUsername, true);
+    // Close any open sheet
+    closeSheet('profile-view');
+  } catch(e) { console.error(e); }
+}
+
+function renderEmojiPicker(toUserId, toUsername) {
+  return '<div style="margin-bottom:12px">'
+    + '<div style="font-size:11px;color:var(--ht);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Send a reaction</div>'
+    + '<div style="display:flex;gap:8px;justify-content:center">'
+    + ATHLETE_EMOJIS.map(function(e) {
+      return '<button onclick="sendEmojiReaction(\'' + toUserId + '\',\'' + toUsername + '\',\'' + e + '\')" style="width:44px;height:44px;border-radius:50%;background:var(--sf);border:.5px solid var(--bd);font-size:20px;cursor:pointer;transition:transform .15s" onmousedown="this.style.transform=\'scale(1.3)\'" onmouseup="this.style.transform=\'\'">' + e + '</button>';
+    }).join('')
+    + '</div></div>';
+}
+
+var _reactionCh = null;
+function startReactionWatch() {
+  if (!A.user) return;
+  if (_reactionCh) { sb.removeChannel(_reactionCh); }
+  _reactionCh = sb.channel('reactions_' + A.user.id)
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'reactions', filter: 'to_user_id=eq.' + A.user.id }, function(payload) {
+      var r = payload.new;
+      if (r) showToast(r.from_username + ' sent you ' + r.emoji, true);
+    })
+    .subscribe();
+}
+
+
+// ══════════════════════════════════════════════════════
+//  SPEED & ACTIVITY DETECTION ENGINE
+// ══════════════════════════════════════════════════════
+
+// Speed thresholds in km/h
+var SPEED_WALK_MAX    = 6;    // 0-6 = walking, no capture
+var SPEED_RUN_MAX     = 20;   // 6-20 = running
+var SPEED_CYCLE_MAX   = 40;   // 20-40 = cycling
+// 40+ = vehicle, blocked
+
+var _speedHistory = [];       // last 10 speed readings (km/h)
+var _vehicleWarningShown = false;
+var _autoSwitchTimer = null;
+
+function calcSpeedKmh(distKm, timeSec) {
+  if (!distKm || !timeSec || timeSec < 0.5) return 0;
+  return (distKm / timeSec) * 3600;
+}
+
+function getActivityFromSpeed(kmh) {
+  if (kmh < 1)              return 'still';
+  if (kmh <= SPEED_WALK_MAX)  return 'walk';
+  if (kmh <= SPEED_RUN_MAX)   return 'run';
+  if (kmh <= SPEED_CYCLE_MAX) return 'cycle';
+  return 'vehicle';
+}
+
+function getSmoothedSpeed() {
+  if (_speedHistory.length === 0) return 0;
+  var recent = _speedHistory.slice(-6);
+  return recent.reduce(function(a, b) { return a + b; }, 0) / recent.length;
+}
+
+function updateSpeedUI(kmh, activity) {
+  var lbl = el('run-mode');
+  var walkWarn = el('walk-warn');
+  if (!lbl) return;
+  var isWalk = activity === 'walk' || activity === 'still';
+  if (walkWarn) walkWarn.style.opacity = isWalk && activity !== 'still' ? '1' : '0';
+  if (activity === 'still')   { lbl.textContent = 'still'; lbl.style.color = 'rgba(255,255,255,0.3)'; return; }
+  if (activity === 'walk')    { lbl.textContent = 'walking — no capture'; lbl.style.color = '#ff9500'; return; }
+  if (activity === 'run')     { lbl.textContent = 'running ' + Math.round(kmh) + ' km/h'; lbl.style.color = '#00f0ff'; return; }
+  if (activity === 'cycle')   { lbl.textContent = 'cycling ' + Math.round(kmh) + ' km/h'; lbl.style.color = '#ff9500'; return; }
+  if (activity === 'vehicle') { lbl.textContent = 'vehicle detected — paused'; lbl.style.color = '#ff2255'; return; }
+}
+
+function handleAutoModeSwitch(activity) {
+  if (!A.sess || !A.sess.on) return;
+
+  // Warn if vehicle detected
+  if (activity === 'vehicle') {
+    var isConfirmedVehicle = checkVehicleSpeed(getSmoothedSpeed());
+    if (isConfirmedVehicle && !_vehicleWarningShown) {
+      _vehicleWarningShown = true;
+      showToast('Vehicle detected — territory capture paused');
+      setTimeout(function() { _vehicleWarningShown = false; }, 15000);
+    }
+    return;
+  }
+
+  // Auto-switch mode if speed doesn't match
+  if (activity === 'run' && A.mode === 'cycle') {
+    clearTimeout(_autoSwitchTimer);
+    _autoSwitchTimer = setTimeout(function() {
+      if (getActivityFromSpeed(getSmoothedSpeed()) === 'run') {
+        A.mode = 'run';
+        showToast('Switched to Run mode', true);
+        updateModeButtons();
+      }
+    }, 10000);
+  } else if (activity === 'cycle' && A.mode === 'run') {
+    clearTimeout(_autoSwitchTimer);
+    _autoSwitchTimer = setTimeout(function() {
+      if (getActivityFromSpeed(getSmoothedSpeed()) === 'cycle') {
+        A.mode = 'cycle';
+        showToast('Switched to Cycle mode', true);
+        updateModeButtons();
+      }
+    }, 10000);
+  } else {
+    clearTimeout(_autoSwitchTimer);
+  }
+}
+
+function updateModeButtons() {
+  var br = el('btn-run');
+  var bc = el('btn-cycle');
+  if (br) br.classList.toggle('on', A.mode === 'run');
+  if (bc) bc.classList.toggle('on', A.mode === 'cycle');
+  var lbl = el('run-mode');
+  if (lbl && (A.mode === 'run' || A.mode === 'cycle')) {
+    // Will be updated by next GPS tick
+  }
+}
+
+function canCaptureAtSpeed(activity) {
+  return activity === 'run' || activity === 'cycle';
+}
+
+
+function onMove(lat,lng){
+  if(A.pos.acc>40)return;
+  var now=Date.now();
+  var d=hav(A.sess.plat,A.sess.plng,lat,lng);
+  if(d<0.008||d>0.03)return;
+
+  // Calculate speed
+  var timeDelta=A.sess._lastMoveTs?(now-A.sess._lastMoveTs)/1000:1;
+  A.sess._lastMoveTs=now;
+  var speedKmh=calcSpeedKmh(d,timeDelta);
+
+  // Use GPS native speed if available and reasonable
+  if(A.pos.gpsSpeed&&A.pos.gpsSpeed>0){
+    speedKmh=A.pos.gpsSpeed*3.6;
+  }
+
+  // Update speed history (keep last 10)
+  _speedHistory.push(speedKmh);
+  if(_speedHistory.length>10)_speedHistory.shift();
+
+  var smoothed=getSmoothedSpeed();
+  var activity=getActivityFromSpeed(smoothed);
+  updateSpeedUI(smoothed,activity);
+  handleAutoModeSwitch(activity);
+
+  // Update session
+  A.sess.km+=d;
+  A.sess.plat=lat;A.sess.plng=lng;
+  A.sess.positions.push([lat,lng]);
+  A.sess.lastMoveTime=now;
+  A.sess.movingKm=(A.sess.movingKm||0)+d;
+  if(!A.sess.paceHistory)A.sess.paceHistory=[];
+  A.sess.paceHistory.push({t:now,d:d});
+  if(A.sess.paceHistory.length>200)A.sess.paceHistory.shift();
+
+  if(A.route&&A.map)A.route.setLatLngs(A.sess.positions);
+  if(A.marker&&A.map){
+    A.marker.setLatLng([lat,lng]);
+    A.map.panTo([lat,lng],{animate:true,duration:.5});
+  }
+
+  // Capture only if speed is run or cycle range
+  if(canCaptureAtSpeed(activity)&&(A.sess.movingKm||0)>=0.015){
+    captureHex(lat,lng,activity);
+  }
+
+  onChallengeMove(lat,lng);
+  markFogExplored(lat,lng);
+
+  el("run-dist").textContent=A.sess.km.toFixed(2);
+  el("run-pace").textContent=rollingPace();
+  el("run-secs").textContent=A.sess.secs;
+}
 async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});const myCount=Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;await sb.from("profiles").update({total_sectors:myCount,total_km:parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3)),total_runs:(A.profile.total_runs||0)+1,total_cal:(A.profile.total_cal||0)+A.sess.cal,last_active:new Date().toISOString()}).eq("id",A.user.id);if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
-function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:"#00f0ff",weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
-function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
+function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);var routeColor=A.mode==="cycle"?"#ff9500":"#00f0ff";A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:routeColor,weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
+function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);drawFogOfWar(A.ctxT,A.cvsT,A.mapT);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
 function szCvs(){if(!A.cvs||!A.map)return;const c=A.map.getContainer();A.cvs.width=c.clientWidth;A.cvs.height=c.clientHeight;}
 function szCvsT(){if(!A.cvsT||!A.mapT)return;const c=A.mapT.getContainer();A.cvsT.width=c.clientWidth;A.cvsT.height=c.clientHeight;}
 function hexDraw(ctx,cx,cy,r,fill,stroke){ctx.beginPath();for(let i=0;i<6;i++){const a=(Math.PI/3)*i-Math.PI/6;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}
-function drawH(ctx,cvs,map,withAll){if(!ctx||!cvs||!map)return;ctx.clearRect(0,0,cvs.width,cvs.height);const b=map.getBounds(),pad=SZ*4,z=map.getZoom(),px=Math.max(5,(z-11)*3.5),uid=A.user?.id;Object.entries(A.allTerritory).forEach(([id,info])=>{const c=hctr(id);if(c.lat<b.getSouth()-pad||c.lat>b.getNorth()+pad)return;if(c.lng<b.getWest()-pad||c.lng>b.getEast()+pad)return;const p=map.latLngToContainerPoint([c.lat,c.lng]);if(info.user_id===uid){hexDraw(ctx,p.x,p.y,px,"rgba(0,240,255,0.22)","rgba(0,240,255,0.75)");}else if(withAll){hexDraw(ctx,p.x,p.y,px,"rgba(255,34,85,0.18)","rgba(255,34,85,0.6)");}});}
+function getModeColors(mode,isOwn){
+  if(isOwn){
+    if(mode==="cycle")return{fill:"rgba(255,149,0,0.25)",stroke:"rgba(255,149,0,0.85)"};
+    return{fill:"rgba(0,240,255,0.22)",stroke:"rgba(0,240,255,0.8)"};
+  }else{
+    if(mode==="cycle")return{fill:"rgba(255,100,0,0.15)",stroke:"rgba(255,100,0,0.55)"};
+    return{fill:"rgba(255,34,85,0.18)",stroke:"rgba(255,34,85,0.6)"};
+  }
+}
+function drawH(ctx,cvs,map,withAll){
+  if(!ctx||!cvs||!map)return;
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  const b=map.getBounds(),pad=SZ*4,z=map.getZoom(),px=Math.max(3,Math.min(12,(z-13)*4)),uid=A.user?.id;
+  Object.entries(A.allTerritory).forEach(([id,info])=>{
+    const c=hctr(id);
+    if(c.lat<b.getSouth()-pad||c.lat>b.getNorth()+pad)return;
+    if(c.lng<b.getWest()-pad||c.lng>b.getEast()+pad)return;
+    const p=map.latLngToContainerPoint([c.lat,c.lng]);
+    const isOwn=info.user_id===uid;
+    if(isOwn){
+      const cols=getModeColors(info.mode||"run",true);
+      hexDraw(ctx,p.x,p.y,px,cols.fill,cols.stroke);
+    }else if(withAll){
+      const cols=getModeColors(info.mode||"run",false);
+      hexDraw(ctx,p.x,p.y,px,cols.fill,cols.stroke);
+    }
+  });
+}
 function runAnim(){const loop=()=>{if(A.sess?.on&&A.map)drawH(A.ctx,A.cvs,A.map,false);A.raf=requestAnimationFrame(loop);};loop();}
 function stopAnim(){if(A.raf){cancelAnimationFrame(A.raf);A.raf=null;}}
 let _cf=null;
-function flashCap(n){const e=el("cflash");if(!e)return;e.textContent=`sector captured - ${n} this run`;e.classList.add("show");clearTimeout(_cf);_cf=setTimeout(()=>e.classList.remove("show"),2200);}
-async function buildSummary(){const s=A.sess;const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("sum-sec").textContent=`+${s.secs}`;el("sum-loc").textContent=`sectors - ${myCount} total owned`;el("sum-km").textContent=s.km.toFixed(2);el("sum-time").textContent=fmt(s.elapsed);el("sum-pace").textContent=pace(s.km,s.elapsed);el("sum-kcal").textContent=s.cal;el("sum-tot").textContent=myCount;try{const{data}=await sb.from("leaderboard").select("id").gte("total_sectors",myCount);el("sum-rank").textContent=`#${(data?.length||0)+1}`;}catch(_){el("sum-rank").textContent="#-";}if(myCount>=50)showAch("City Explorer","50+ sectors captured");else if((A.profile?.total_runs||0)>=5)showAch("Regular Runner","5 patrol sessions completed");else if(s.secs>=5)showAch("Sector Hunter","5+ sectors in one run");else el("ach").style.display="none";}
+function flashCap(n, mult){const e=el("cflash");if(!e)return;e.textContent=`sector captured - ${n} this run`;e.classList.add("show");clearTimeout(_cf);_cf=setTimeout(()=>e.classList.remove("show"),2200);}
+async function buildSummary(){const s=A.sess;const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("sum-sec").textContent=`+${s.secs}`;el("sum-loc").textContent=`sectors - ${myCount} total owned`;el("sum-km").textContent=s.km.toFixed(2);el("sum-time").textContent=fmt(s.elapsed);el("sum-pace").textContent=pace(s.km,s.elapsed);el("sum-kcal").textContent=calcCalFromDist(s.km,A.mode);el("sum-tot").textContent=myCount;try{const{data}=await sb.from("leaderboard").select("id").gte("total_sectors",myCount);el("sum-rank").textContent=`#${(data?.length||0)+1}`;}catch(_){el("sum-rank").textContent="#-";}if(myCount>=50)showAch("City Explorer","50+ sectors captured");else if((A.profile?.total_runs||0)>=5)showAch("Regular Runner","5 patrol sessions completed");else if(s.secs>=5)showAch("Sector Hunter","5+ sectors in one run");else el("ach").style.display="none";}
 function showAch(t,d){el("ach").style.display="flex";el("ach-t").textContent=t;el("ach-d").textContent=d;el("ach-ico").textContent="Trophy";}
 async function loadLB(){const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await sb.from("profiles").select("id,username,city,total_sectors,total_runs,total_km,gender,last_active").order("total_sectors",{ascending:false}).limit(30);if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;const gIcon=row.gender==="male"?'<span style="font-size:11px;color:#4a9eff;margin-left:4px">&#9794;</span>':row.gender==="female"?'<span style="font-size:11px;color:#ff6eb0;margin-left:4px">&#9792;</span>':"";
-      return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${row.username}${gIcon}${isMe?" (you)":""}</div><div style="font-size:10px;color:var(--ht)">${row.total_runs||0} runs · ${parseFloat(row.total_km||0).toFixed(1)}km</div></div><div style="text-align:right"><div style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--ht)">sectors</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
-async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("leaderboard").select("username,total_sectors").neq("id",A.user.id).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=`${data[0].total_sectors||0} sectors - #1 rival`;}}catch(_){}}
+      return`<div class="lrow${isMe?" me":""}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}" style="${isMe?"":"cursor:pointer"}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${(()=>{var cc=getCountryCode(row.country||"");return cc?countryCodeToFlag(cc)+" ":"";})()} ${row.username}${gIcon}${isMe?" (you)":""}</div><div style="font-size:10px;color:var(--ht)">${row.total_runs||0} runs · ${parseFloat(row.total_km||0).toFixed(1)}km</div></div><div style="text-align:right"><div style="font-family:Orbitron,sans-serif;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--ht)">sectors</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
+async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("profiles").select("username,total_sectors").neq("id",A.user.id).order("total_sectors",{ascending:false}).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=(data[0].total_sectors||0)+" sectors - #1 rival";}}catch(_){}
+  loadCityKing().catch(()=>{});
+  // Season countdown banner
+  var banner = getSeasonBanner();
+  var seasonEl = document.getElementById('season-banner');
+  if(seasonEl){ if(banner){seasonEl.textContent='⏱ '+banner+' — '+getCurrentSeason();seasonEl.style.display='block';}else seasonEl.style.display='none'; }
+  loadDailyBounties().catch(()=>{});
+  loadFogExplored().catch(()=>{});
+  updateOpenChallengeUI();}
 function setMode(m){A.mode=m;el("btn-run").classList.toggle("on",m==="run");el("btn-cycle").classList.toggle("on",m==="cycle");const lbl=el("run-mode");if(lbl)lbl.textContent=m;}
-function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",forgot:"s-forgot",reset:"s-reset",loading:"s-loading"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
+function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard","challenge-hub":"s-challenge-hub",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",forgot:"s-forgot",reset:"s-reset",loading:"s-loading","my-profile":"s-my-profile","challenge-live":"s-challenge-live","challenge-result":"s-challenge-result","challenge-incoming":"s-challenge-incoming"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
 function goHome(){stopAnim();goTo("home");}
 function showPaywall(){goTo("paywall");}
 function dismissPaywall(){goTo("home");}
