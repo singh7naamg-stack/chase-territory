@@ -1370,19 +1370,22 @@ function startRun(){
   discardSavedSession();
   A.sess={on:false,t0:Date.now(),elapsed:0,km:0,plat:A.pos.lat,plng:A.pos.lng,secs:0,cal:0,positions:[[A.pos.lat,A.pos.lng]],movingKm:0,lastMoveTime:null,paceHistory:[],_lastMoveTs:null};
   goTo('run');
-  startTick();
   setTimeout(function(){
     try{buildRunMap();}catch(e){console.error(e);}
     // Resume AudioContext (needed on iOS/Android after user gesture)
     if(_audioCtx&&_audioCtx.state==='suspended'){_audioCtx.resume();}
     startCountdown(function(){
-      if(A.sess){A.sess.on=true;}
+      if(A.sess){
+        A.sess.on=true;
+        A.sess.t0=Date.now(); // reset timer to exact GO moment
+      }
+      startTick(); // timer starts exactly at GO
       captureHex(A.pos.lat,A.pos.lng,'run');
     });
   },300);
 }
 let _tick=null;
-function startTick(){clearInterval(_tick);_tick=setInterval(()=>{if(!A.sess?.on){clearInterval(_tick);return;}A.sess.elapsed=Math.floor((Date.now()-A.sess.t0)/1000);
+function startTick(){clearInterval(_tick);_tick=setInterval(()=>{if(!A.sess){clearInterval(_tick);return;}if(!A.sess.on)return;A.sess.elapsed=Math.floor((Date.now()-A.sess.t0)/1000);
     // Calories only from actual distance moved, not time
     A.sess.cal=calcCalFromDist(A.sess.km||0,A.mode);
     el("run-timer").textContent=fmt(A.sess.elapsed);
