@@ -969,27 +969,72 @@ async function uploadAvatar(event) {
   var file = event.target.files[0];
   if (!file || !A.user) return;
   var status = el('mp-upload-status');
-  if (status) status.textContent = 'Uploading...';
+  if (status) { status.textContent = 'Uploading...'; status.style.color = 'var(--cy)'; }
+
+  // Validate file type and size
+  var allowed = ['image/jpeg','image/jpg','image/png','image/webp','image/gif'];
+  if (allowed.indexOf(file.type) === -1) {
+    if (status) { status.textContent = 'Only JPG, PNG, WEBP allowed'; status.style.color = 'var(--rd)'; }
+    return;
+  }
+  if (file.size > 3 * 1024 * 1024) {
+    if (status) { status.textContent = 'Max file size is 3MB'; status.style.color = 'var(--rd)'; }
+    return;
+  }
+
   try {
-    var ext = file.name.split('.').pop();
+    // Use jpg extension for consistency
+    var ext = file.type === 'image/png' ? 'png' : 'jpg';
     var path = A.user.id + '/avatar.' + ext;
-    var res = await sb.storage.from('avatars').upload(path, file, { upsert: true });
-    if (res.error) throw res.error;
+
+    // Remove old file first to avoid cache issues
+    await sb.storage.from('avatars').remove([path]).catch(function(){});
+
+    // Upload new file
+    var res = await sb.storage.from('avatars').upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: '3600'
+    });
+
+    if (res.error) {
+      console.error('Storage error:', res.error);
+      throw new Error(res.error.message || 'Upload failed');
+    }
+
+    // Get public URL with cache bust
     var urlRes = sb.storage.from('avatars').getPublicUrl(path);
-    var url = urlRes.data.publicUrl + '?t=' + Date.now();
-    await sb.from('profiles').update({ avatar_url: url }).eq('id', A.user.id);
+    var url = urlRes.data.publicUrl + '?v=' + Date.now();
+
+    // Update profile in DB
+    var dbRes = await sb.from('profiles').update({ avatar_url: url }).eq('id', A.user.id);
+    if (dbRes.error) throw new Error(dbRes.error.message);
+
+    // Update local profile
     if (A.profile) A.profile.avatar_url = url;
+
+    // Update all avatar display elements
     var img = el('mp-avatar-img');
     var lt = el('mp-avatar-letter');
     if (img) { img.src = url; img.style.display = 'block'; }
     if (lt) lt.style.display = 'none';
+    // Update home screen avatar
     var avLetter = el('av-letter');
     if (avLetter && A.profile) avLetter.textContent = A.profile.username ? A.profile.username.charAt(0).toUpperCase() : '?';
-    if (status) status.textContent = 'Profile picture updated!';
+    // Update settings avatar
+    var setAv = el('set-av');
+    if (setAv && A.profile) setAv.textContent = A.profile.username ? A.profile.username.charAt(0).toUpperCase() : '?';
+
+    if (status) { status.textContent = 'Profile picture updated!'; status.style.color = 'var(--cy)'; }
     setTimeout(function() { if (status) status.textContent = ''; }, 3000);
+    showToast('Profile picture updated!', true);
+
   } catch(e) {
-    if (status) status.textContent = 'Upload failed. Try again.';
-    console.error(e);
+    console.error('Upload error:', e);
+    if (status) {
+      status.textContent = 'Upload failed: ' + (e.message || 'Check your connection');
+      status.style.color = 'var(--rd)';
+    }
   }
 }
 
@@ -1285,7 +1330,7 @@ function showChallengeResult(ch) {
 function buildChallengeMap() {
   if (_mapC) { try { _mapC.remove(); } catch(e) {} _mapC = null; }
   _mapC = L.map('map-c', { zoomControl: false, attributionControl: false }).setView([A.pos.lat, A.pos.lng], 16);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, opacity: 0.85 }).addTo(_mapC);
+  L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', { maxZoom: 20, opacity: 1, attribution: '&copy; Stadia Maps' }).addTo(_mapC);
   var ico = L.divIcon({ className: '', html: '<div style="width:14px;height:14px;border-radius:50%;background:#00f0ff;border:2px solid white;box-shadow:0 0 8px #00f0ff"></div>', iconSize: [14,14], iconAnchor: [7,7] });
   L.marker([A.pos.lat, A.pos.lng], { icon: ico }).addTo(_mapC);
   _cvsC = el('cvs-c');
@@ -1319,9 +1364,22 @@ function startPresence(){if(!A.user||!A.profile)return;A.presenceCh=sb.channel("
 function bcast(){if(!A.presenceCh||!A.profile)return;A.presenceCh.track({user_id:A.user.id,username:A.profile.username,lat:A.pos.lat,lng:A.pos.lng,running:A.sess?.on||false});}
 function updateRunners(state){if(!A.map)return;Object.entries(state).forEach(([key,prs])=>{const p=prs[0];if(!p||p.user_id===A.user?.id)return;const col=p.running?"#ff2255":"#ff660088";if(A.otherMarkers[p.user_id]){A.otherMarkers[p.user_id].setLatLng([p.lat,p.lng]);}else{const ico=L.divIcon({className:"",html:`<div title="${p.username}" style="width:12px;height:12px;border-radius:50%;background:${col};border:2px solid white"></div>`,iconSize:[12,12],iconAnchor:[6,6]});A.otherMarkers[p.user_id]=L.marker([p.lat,p.lng],{icon:ico}).addTo(A.map);}});const active=new Set(Object.keys(state));Object.keys(A.otherMarkers).forEach(uid=>{if(!active.has(uid)){if(A.map)A.map.removeLayer(A.otherMarkers[uid]);delete A.otherMarkers[uid];}});}
 function stopPresence(){clearInterval(_pi);if(A.presenceCh){sb.removeChannel(A.presenceCh);A.presenceCh=null;}}
-function startRun(){_speedHistory=[];_vehicleWarningShown=false;clearTimeout(_autoSwitchTimer);
-discardSavedSession();
-A.sess={on:false,t0:Date.now(),elapsed:0,km:0,plat:A.pos.lat,plng:A.pos.lng,secs:0,cal:0,positions:[[A.pos.lat,A.pos.lng]],movingKm:0,lastMoveTime:null,paceHistory:[],_lastMoveTs:null};goTo("run");startTick();setTimeout(()=>{try{buildRunMap();}catch(e){console.error(e);}captureHex(A.pos.lat,A.pos.lng);},300);}
+function startRun(){
+  _speedHistory=[];_vehicleWarningShown=false;clearTimeout(_autoSwitchTimer);
+  discardSavedSession();
+  A.sess={on:false,t0:Date.now(),elapsed:0,km:0,plat:A.pos.lat,plng:A.pos.lng,secs:0,cal:0,positions:[[A.pos.lat,A.pos.lng]],movingKm:0,lastMoveTime:null,paceHistory:[],_lastMoveTs:null};
+  goTo('run');
+  startTick();
+  setTimeout(function(){
+    try{buildRunMap();}catch(e){console.error(e);}
+    // Resume AudioContext (needed on iOS/Android after user gesture)
+    if(_audioCtx&&_audioCtx.state==='suspended'){_audioCtx.resume();}
+    startCountdown(function(){
+      if(A.sess){A.sess.on=true;}
+      captureHex(A.pos.lat,A.pos.lng,'run');
+    });
+  },300);
+}
 let _tick=null;
 function startTick(){clearInterval(_tick);_tick=setInterval(()=>{if(!A.sess?.on){clearInterval(_tick);return;}A.sess.elapsed=Math.floor((Date.now()-A.sess.t0)/1000);
     // Calories only from actual distance moved, not time
@@ -2531,8 +2589,8 @@ function onMove(lat,lng){
   el("run-secs").textContent=A.sess.secs;
 }
 async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});const myCount=Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;await sb.from("profiles").update({total_sectors:myCount,total_km:parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3)),total_runs:(A.profile.total_runs||0)+1,total_cal:(A.profile.total_cal||0)+A.sess.cal,last_active:new Date().toISOString()}).eq("id",A.user.id);if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
-function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);var routeColor=A.mode==="cycle"?"#ff9500":"#00f0ff";A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:routeColor,weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
-function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:.85}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);drawFogOfWar(A.ctxT,A.cvsT,A.mapT);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
+function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:1}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);var routeColor=A.mode==="cycle"?"#ff9500":"#00f0ff";A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:routeColor,weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
+function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png",{maxZoom:20,opacity:1}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);drawFogOfWar(A.ctxT,A.cvsT,A.mapT);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
 function szCvs(){if(!A.cvs||!A.map)return;const c=A.map.getContainer();A.cvs.width=c.clientWidth;A.cvs.height=c.clientHeight;}
 function szCvsT(){if(!A.cvsT||!A.mapT)return;const c=A.mapT.getContainer();A.cvsT.width=c.clientWidth;A.cvsT.height=c.clientHeight;}
 function hexDraw(ctx,cx,cy,r,fill,stroke){ctx.beginPath();for(let i=0;i<6;i++){const a=(Math.PI/3)*i-Math.PI/6;i===0?ctx.moveTo(cx+r*Math.cos(a),cy+r*Math.sin(a)):ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=1.5;ctx.stroke();}
