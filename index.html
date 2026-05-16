@@ -988,6 +988,7 @@ async function doSignup(){
   const uname=el("su-uname").value.trim(),email=el("su-email").value.trim(),pass=el("su-pass").value;
   const dob=el("su-dob").value||null;
   el("su-err").textContent="";
+  var glBtn=document.getElementById("su-goto-login");if(glBtn)glBtn.style.display="none";
   if(!uname||uname.length<3){el("su-err").textContent="Username min 3 characters";return;}
   if(!email||!pass){el("su-err").textContent="Email and password required";return;}
   if(pass.length<6){el("su-err").textContent="Password min 6 characters";return;}
@@ -1040,10 +1041,21 @@ async function doSignup(){
     goTo("home");
     return;
   }
-  // Email confirmation still on → tell user to login after confirming
+  // Email confirmation still on
   if(data.user&&!data.session){
-    el("su-err").style.color="var(--cy)";
-    el("su-err").textContent="Account created! Check your email, confirm it, then come back to login.";
+    // Check if this is a duplicate - Supabase returns same response for security
+    // identities array is empty for duplicate unconfirmed accounts
+    var identities=data.user.identities||[];
+    if(identities.length===0){
+      // Duplicate account - user already exists
+      el("su-err").style.color="var(--am)";
+      el("su-err").textContent="This email is already linked to an account. If you forgot your password tap 'Reset Password' below.";
+      var glBtn2=document.getElementById("su-goto-login");if(glBtn2)glBtn2.style.display="block";
+    } else {
+      // Genuine new account
+      el("su-err").style.color="var(--cy)";
+      el("su-err").textContent="Account created! Check your email and confirm it, then come back to login.";
+    }
     btn.disabled=false;btn.textContent="CREATE ACCOUNT";
     return;
   }
