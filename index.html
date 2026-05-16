@@ -15,6 +15,15 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  <script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js')
+        .then(reg => console.log('Service Worker registered successfully!', reg))
+        .catch(err => console.log('Service Worker registration failed: ', err));
+    });
+  }
+</script>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{--bg:#060609;--sf:rgba(255,255,255,0.05);--bd:rgba(255,255,255,0.08);--cy:#00f0ff;--cyd:rgba(0,240,255,0.15);--rd:#ff2255;--am:#ff9500;--tx:rgba(255,255,255,1);--dm:rgba(255,255,255,0.5);--ht:rgba(255,255,255,0.25);--r:16px;--rs:10px}
 body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflow:hidden;height:100vh;height:100dvh;width:100vw}
