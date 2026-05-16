@@ -484,7 +484,7 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
     </div>
     <div style="display:flex;gap:4px;padding:0 16px">
       <button id="lb-tab-city" onclick="switchLbTier('city')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid rgba(0,240,255,0.4);background:var(--cyd);font-size:11px;font-weight:600;color:var(--cy);cursor:pointer">🏙 City</button>
-      <button id="lb-tab-emirate" onclick="switchLbTier('emirate')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🏛 Emirate</button>
+      <button id="lb-tab-emirate" onclick="switchLbTier('emirate')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🏛 Region</button>
       <button id="lb-tab-country" onclick="switchLbTier('country')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🌍 Country</button>
       <button id="lb-tab-global" onclick="switchLbTier('global')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🌐 Global</button>
     </div>
@@ -599,7 +599,7 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
         <div id="set-av" onclick="openMyProfile();closeSettings()" style="width:48px;height:48px;border-radius:50%;background:var(--cyd);border:2px solid var(--cy);display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--cy);cursor:pointer">S</div>
         <div>
           <div style="font-size:15px;font-weight:600" id="set-username">—</div>
-          <div style="font-size:11px;color:var(--ht);margin-top:2px"><span id="set-city-val">—</span>, <span id="set-emirate-val">—</span> (Region)</div>
+          <div style="font-size:11px;color:var(--ht);margin-top:2px"><span id="set-city-val">—</span>, <span id="set-emirate-val">—</span> </div>
           <div style="font-size:11px;color:var(--ht)"><span id="set-country-val">—</span></div>
         </div>
         <button onclick="openMyProfile();closeSettings()" style="margin-left:auto;padding:7px 12px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);font-size:12px;color:var(--dm);cursor:pointer">Edit</button>
@@ -996,7 +996,7 @@ async function doSignup(){
   const emirate=document.getElementById('su-emirate')?.value.trim()||_detectedEmirate||'';
   const nationality=_selectedNationality.label||'';
   const nationalityCode=_selectedNationality.code||'';
-  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob,country:country,city:city,emirate:emirate,nationality:nationality,nationality_code:nationalityCode}}});
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob,country:country,city:city,region:emirate,nationality:nationality,nationality_code:nationalityCode}}});
   if(error){
     var msg=error.message||"";
     var friendly=msg;
@@ -2669,7 +2669,7 @@ function getTitle(gender, tier) {
   var g = gender === 'female' ? 'f' : 'm';
   var titles = {
     city:     { m: 'City King',           f: 'City Queen' },
-    emirate:  { m: 'Provincial Warlord',  f: 'Provincial Warrior' },
+    region:  { m: 'Regional Warlord',  f: 'Regional Warrior' },
     country:  { m: 'National Commander',  f: 'National Commander' },
     global:   { m: 'World Dominator',     f: 'World Dominator' }
   };
@@ -2677,7 +2677,7 @@ function getTitle(gender, tier) {
 }
 
 function getTitleIcon(tier) {
-  var icons = { city: '👑', emirate: '⚔️', country: '🎖️', global: '🌐' };
+  var icons = { city: '👑', region: '⚔️', country: '🎖️', global: '🌐' };
   return icons[tier] || '🏆';
 }
 
@@ -3394,7 +3394,7 @@ function switchLbTier(tier) {
     tab.style.borderColor = active ? 'rgba(0,240,255,0.4)' : 'var(--bd)';
   });
   // Update title
-  var titles = {city:'City ranks', emirate:'Emirate ranks', country:'Country ranks', global:'Global ranks'};
+  var titles = {city:'City ranks', region:'Region ranks', country:'Country ranks', global:'Global ranks'};
   var titleEl = document.getElementById('lb-title');
   if (titleEl) titleEl.textContent = titles[tier] || 'Ranks';
   loadLB(tier);
@@ -3424,7 +3424,7 @@ async function homeUI(){
       try{
         await sb.from("profiles").update({
           country:detectedCountry.name,
-          emirate:detectedEmirate||"",
+          region:detectedEmirate||"",
           city:detectedEmirate||detectedCountry.name
         }).eq("id",A.user.id);
         A.profile.country=detectedCountry.name;
