@@ -275,7 +275,12 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
         <input class="inp" id="su-nationality" type="text" placeholder="Type your nationality e.g. Indian, British..." oninput="onNationalityInput(this.value)" autocomplete="off">
         <div id="nat-suggestions" style="margin-top:6px"></div>
       </div>
-      <div class="err" id="su-err"></div>
+      <div class="err" id="su-err" style="white-space:pre-line;line-height:1.6"></div>
+      <div id="su-goto-login" style="display:none;text-align:center;margin-top:4px">
+        <button onclick="goTo('login')" style="background:none;border:none;color:var(--cy);font-size:13px;cursor:pointer;text-decoration:underline">Go to Login →</button>
+        <span style="color:var(--ht);font-size:12px;margin:0 8px">or</span>
+        <button onclick="goTo('forgot')" style="background:none;border:none;color:var(--am);font-size:13px;cursor:pointer;text-decoration:underline">Reset Password →</button>
+      </div>
       <button class="btn-p" id="su-btn" onclick="doSignup()">CREATE ACCOUNT</button>
       <button onclick="goTo('landing')" style="background:none;border:none;color:var(--ht);font-size:13px;cursor:pointer;padding:8px">← Back</button>
     </div>
@@ -950,7 +955,19 @@ async function doLogin(){
   const btn=el("login-btn");btn.disabled=true;btn.textContent="Logging in...";
   try{
     const{data,error}=await sb.auth.signInWithPassword({email,password:pass});
-    if(error){el("login-err").textContent=error.message;btn.disabled=false;btn.textContent="LOGIN";return;}
+    if(error){
+    var lmsg=error.message||"";
+    var lfriendly=lmsg;
+    if(lmsg.toLowerCase().includes("invalid")||lmsg.toLowerCase().includes("credentials")||lmsg.toLowerCase().includes("wrong")){
+      lfriendly="Incorrect email or password. Please try again.";
+    } else if(lmsg.toLowerCase().includes("not confirmed")||lmsg.toLowerCase().includes("confirm")){
+      lfriendly="Please confirm your email first. Check your inbox for the confirmation link.";
+    } else if(lmsg.toLowerCase().includes("rate limit")){
+      lfriendly="Too many attempts. Please wait a minute.";
+    }
+    el("login-err").textContent=lfriendly;
+    btn.disabled=false;btn.textContent="LOGIN";return;
+  }
     A.user=data.user;
     try{const{data:p}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(p)A.profile=p;}catch(e){}
     loadTerritory().catch(()=>{});
@@ -980,8 +997,39 @@ async function doSignup(){
   const nationality=_selectedNationality.label||'';
   const nationalityCode=_selectedNationality.code||'';
   const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob,country:country,city:city,emirate:emirate,nationality:nationality,nationality_code:nationalityCode}}});
-  if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
-  if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  if(error){
+    var msg=error.message||"";
+    var friendly=msg;
+    var isDuplicate=false;
+    if(msg.toLowerCase().indexOf("already registered")>-1||msg.toLowerCase().indexOf("already exists")>-1||msg.toLowerCase().indexOf("user already")>-1){
+      friendly="This email is already linked to an account. Use Forgot Password to reset.";
+      isDuplicate=true;
+      el("su-err").style.color="var(--am)";
+      var gl=document.getElementById("su-goto-login");if(gl)gl.style.display="block";
+    } else {
+      el("su-err").style.color="var(--rd)";
+      var gl2=document.getElementById("su-goto-login");if(gl2)gl2.style.display="none";
+      if(msg.toLowerCase().indexOf("password")>-1){friendly="Password must be at least 6 characters.";}
+      else if(msg.toLowerCase().indexOf("invalid email")>-1){friendly="Please enter a valid email address.";}
+      else if(msg.toLowerCase().indexOf("rate limit")>-1){friendly="Too many attempts. Wait a minute and try again.";}
+    }
+    el("su-err").textContent=friendly;
+    btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
+  if(error){
+    var msg=error.message||"";
+    var friendly=msg;
+    if(msg.toLowerCase().includes("already registered")||msg.toLowerCase().includes("already exists")||msg.toLowerCase().includes("email address is already")||msg.toLowerCase().includes("user already")){
+      friendly="⚠ This email is already linked to an account.\n\nForgot your password? Use the \'Forgot password\' option on the login screen.";
+      el("su-err").style.color="var(--am)";
+      var gl=document.getElementById("su-goto-login");if(gl)gl.style.display="block";
+    } else {
+      var gl2=document.getElementById("su-goto-login");if(gl2)gl2.style.display="none";
+      if(msg.toLowerCase().indexOf("password")>-1){friendly="Password must be at least 6 characters.";}
+      else if(msg.toLowerCase().indexOf("invalid")>-1){friendly="Please enter a valid email address.";}
+      else if(msg.toLowerCase().indexOf("rate")>-1){friendly="Too many attempts. Wait a minute.";}
+    }
+    el("su-err").textContent=friendly;
+    btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
   // Email confirmation disabled → session exists, go straight to home
   if(data.session){
     A.user=data.user;
