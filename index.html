@@ -459,11 +459,17 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
   </div>
 </div>
 <div id="s-leaderboard" class="screen hidden">
-  <div class="safe-top" style="padding-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px">
+  <div class="safe-top" style="padding-bottom:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px;margin-bottom:10px">
       <button onclick="goHome()" style="background:none;border:none;color:var(--dm);font-size:13px;cursor:pointer">back</button>
-      <div style="font-family:Orbitron,sans-serif;font-size:15px;font-weight:700">City ranks</div>
-      <button onclick="loadLB()" style="background:none;border:none;color:var(--cy);font-size:12px;cursor:pointer">refresh</button>
+      <div style="font-family:Orbitron,monospace;font-size:15px;font-weight:700" id="lb-title">City ranks</div>
+      <button onclick="loadLB(_currentLbTier)" style="background:none;border:none;color:var(--cy);font-size:12px;cursor:pointer">refresh</button>
+    </div>
+    <div style="display:flex;gap:4px;padding:0 16px">
+      <button id="lb-tab-city" onclick="switchLbTier('city')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid rgba(0,240,255,0.4);background:var(--cyd);font-size:11px;font-weight:600;color:var(--cy);cursor:pointer">🏙 City</button>
+      <button id="lb-tab-emirate" onclick="switchLbTier('emirate')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🏛 Emirate</button>
+      <button id="lb-tab-country" onclick="switchLbTier('country')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🌍 Country</button>
+      <button id="lb-tab-global" onclick="switchLbTier('global')" style="flex:1;padding:8px 4px;border-radius:var(--rs);border:.5px solid var(--bd);background:var(--sf);font-size:11px;font-weight:600;color:var(--dm);cursor:pointer">🌐 Global</button>
     </div>
   </div>
   <div style="flex:1;overflow-y:auto" id="lb-list"><div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div></div>
@@ -959,7 +965,7 @@ function cancelSignOut() {
   var modal = document.getElementById('signout-modal');
   if (modal) modal.style.display = 'none';
 }
-async function confirmSignOut(){if(!confirm("Sign out?"))return;stopGPS();stopPresence();stopRT();stopAnim();clearInterval(_sessionWatch);localStorage.removeItem(SESSION_KEY);await sb.auth.signOut();}
+async function confirmSignOut(){stopGPS();stopPresence();stopRT();stopAnim();clearInterval(_sessionWatch);localStorage.removeItem(SESSION_KEY);var modal=document.getElementById("signout-modal");if(modal)modal.style.display="none";await sb.auth.signOut();}
 // ══════════════════════════════════════════════════════
 //  PROFILE PICTURE
 // ══════════════════════════════════════════════════════
@@ -3032,7 +3038,17 @@ function onMove(lat,lng){
   el("run-pace").textContent=rollingPace();
   el("run-secs").textContent=A.sess.secs;
 }
-async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});const myCount=Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;await sb.from("profiles").update({total_sectors:myCount,total_km:parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3)),total_runs:(A.profile.total_runs||0)+1,total_cal:(A.profile.total_cal||0)+A.sess.cal,last_active:new Date().toISOString()}).eq("id",A.user.id);if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
+async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});const myCount=Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;var newMonthly=(A.profile.monthly_sectors||0)+A.sess.secs;
+    await sb.from("profiles").update({
+      total_sectors:myCount,
+      monthly_sectors:newMonthly,
+      season_month:getCurrentSeason(),
+      total_km:parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3)),
+      total_runs:(A.profile.total_runs||0)+1,
+      total_cal:(A.profile.total_cal||0)+A.sess.cal,
+      last_active:new Date().toISOString()
+    }).eq("id",A.user.id);
+    if(A.profile){A.profile.monthly_sectors=newMonthly;}if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
 function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,opacity:1,attribution:"Esri"}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);var routeColor=A.mode==="cycle"?"#ff9500":"#00f0ff";A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:routeColor,weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
 function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,opacity:1,attribution:"Esri"}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);drawFogOfWar(A.ctxT,A.cvsT,A.mapT);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
 function szCvs(){if(!A.cvs||!A.map)return;const c=A.map.getContainer();A.cvs.width=c.clientWidth;A.cvs.height=c.clientHeight;}
@@ -3072,7 +3088,32 @@ let _cf=null;
 function flashCap(n, mult){const e=el("cflash");if(!e)return;e.textContent=`sector captured - ${n} this run`;e.classList.add("show");clearTimeout(_cf);_cf=setTimeout(()=>e.classList.remove("show"),2200);}
 async function buildSummary(){const s=A.sess;const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("sum-sec").textContent=`+${s.secs}`;el("sum-loc").textContent=`sectors - ${myCount} total owned`;el("sum-km").textContent=s.km.toFixed(2);el("sum-time").textContent=fmt(s.elapsed);el("sum-pace").textContent=pace(s.km,s.elapsed);el("sum-kcal").textContent=calcCalFromDist(s.km,A.mode);el("sum-tot").textContent=myCount;try{const{data}=await sb.from("leaderboard").select("id").gte("total_sectors",myCount);el("sum-rank").textContent=`#${(data?.length||0)+1}`;}catch(_){el("sum-rank").textContent="#-";}if(myCount>=50)showAch("City Explorer","50+ sectors captured");else if((A.profile?.total_runs||0)>=5)showAch("Regular Runner","5 patrol sessions completed");else if(s.secs>=5)showAch("Sector Hunter","5+ sectors in one run");else el("ach").style.display="none";}
 function showAch(t,d){el("ach").style.display="flex";el("ach-t").textContent=t;el("ach-d").textContent=d;el("ach-ico").textContent="Trophy";}
-async function loadLB(){const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await sb.from("profiles").select("id,username,city,total_sectors,total_runs,total_km,gender,last_active").order("total_sectors",{ascending:false}).limit(30);if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;const gIcon=row.gender==="male"?'<span style="font-size:11px;color:#4a9eff;margin-left:4px">&#9794;</span>':row.gender==="female"?'<span style="font-size:11px;color:#ff6eb0;margin-left:4px">&#9792;</span>':"";
+var _currentLbTier = 'city';
+function switchLbTier(tier) {
+  _currentLbTier = tier;
+  // Update tab styles
+  ['city','emirate','country','global'].forEach(function(t) {
+    var tab = document.getElementById('lb-tab-' + t);
+    if (!tab) return;
+    var active = t === tier;
+    tab.style.background = active ? 'var(--cyd)' : 'var(--sf)';
+    tab.style.color = active ? 'var(--cy)' : 'var(--dm)';
+    tab.style.borderColor = active ? 'rgba(0,240,255,0.4)' : 'var(--bd)';
+  });
+  // Update title
+  var titles = {city:'City ranks', emirate:'Emirate ranks', country:'Country ranks', global:'Global ranks'};
+  var titleEl = document.getElementById('lb-title');
+  if (titleEl) titleEl.textContent = titles[tier] || 'Ranks';
+  loadLB(tier);
+}
+async function loadLB(tier){
+  tier = tier || _currentLbTier || 'city';const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await (function(){
+    var q=sb.from("profiles").select("id,username,city,emirate,country,total_sectors,total_runs,total_km,gender,avatar_url").order("total_sectors",{ascending:false}).limit(30);
+    if(tier==="city"&&A.profile&&A.profile.city)q=q.eq("city",A.profile.city);
+    else if(tier==="emirate"&&A.profile&&A.profile.emirate)q=q.eq("emirate",A.profile.emirate);
+    else if(tier==="country"&&A.profile&&A.profile.country)q=q.eq("country",A.profile.country);
+    return q;
+  })();if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;const gIcon=row.gender==="male"?'<span style="font-size:11px;color:#4a9eff;margin-left:4px">&#9794;</span>':row.gender==="female"?'<span style="font-size:11px;color:#ff6eb0;margin-left:4px">&#9792;</span>':"";
       return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}" style="${isMe?"":"cursor:pointer"}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1;cursor:${isMe?"default":"pointer"}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}""><div style="font-size:13px;font-weight:600">${(()=>{var cc=getCountryCode(row.country||"");return cc?countryCodeToFlag(cc)+" ":"";})()} ${row.username}${gIcon}${isMe?" <span style=\"font-size:10px;color:var(--cy)\">(you)</span>":""}</div><div style="font-size:10px;color:var(--ht)">${row.city||""}</div></div><div style="text-align:right;cursor:pointer" onclick="viewRivalTerritory('${row.id}','${row.username}')" title="View territory"><div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--rd)">sectors ↗</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
 async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("profiles").select("username,total_sectors").neq("id",A.user.id).order("total_sectors",{ascending:false}).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=(data[0].total_sectors||0)+" sectors - #1 rival";}}catch(_){}
   loadCityKing().catch(()=>{});
@@ -3084,7 +3125,7 @@ async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("g
   loadFogExplored().catch(()=>{});
   updateOpenChallengeUI();}
 function setMode(m){A.mode=m;el("btn-run").classList.toggle("on",m==="run");el("btn-cycle").classList.toggle("on",m==="cycle");const lbl=el("run-mode");if(lbl)lbl.textContent=m;}
-function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard","challenge-hub":"s-challenge-hub","rival-territory":"s-rival-territory",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",forgot:"s-forgot",reset:"s-reset",loading:"s-loading","my-profile":"s-my-profile","challenge-live":"s-challenge-live","challenge-result":"s-challenge-result","challenge-incoming":"s-challenge-incoming"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard")loadLB();if(name==="home")homeUI();}
+function goTo(name){const map={home:"s-home",run:"s-run",summary:"s-summary",territory:"s-territory",leaderboard:"s-leaderboard","challenge-hub":"s-challenge-hub","rival-territory":"s-rival-territory",paywall:"s-paywall",auth:"s-landing",landing:"s-landing",login:"s-login",signup:"s-signup",forgot:"s-forgot",reset:"s-reset",loading:"s-loading","my-profile":"s-my-profile","challenge-live":"s-challenge-live","challenge-result":"s-challenge-result","challenge-incoming":"s-challenge-incoming"};document.querySelectorAll(".screen").forEach(s=>{s.classList.remove("active");s.classList.add("hidden");});const sc=el(map[name]||name);if(sc){sc.classList.remove("hidden");sc.classList.add("active");}if(name==="territory")setTimeout(buildTerritoryMap,60);if(name==="leaderboard"){loadLB(_currentLbTier||"city");}if(name==="home")homeUI();}
 function goHome(){stopAnim();goTo("home");}
 function showPaywall(){goTo("paywall");}
 function dismissPaywall(){goTo("home");}
