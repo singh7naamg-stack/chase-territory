@@ -251,8 +251,8 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
       <!-- Hidden values -->
       <input id="su-country" type="hidden" value="">
       <div>
-        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Emirate / State <span style="color:var(--ht);font-weight:400">(auto-detected)</span></div>
-        <input class="inp" id="su-emirate" type="text" placeholder="e.g. Abu Dhabi Emirate, Dubai">
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Region <span style="color:var(--ht);font-weight:400">(auto-detected)</span></div>
+        <input class="inp" id="su-emirate" type="text" placeholder="e.g. Abu Dhabi, Dubai, London">
       </div>
       <input id="su-emirate-hidden" type="hidden" value="">
       <div>
@@ -262,6 +262,18 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
       <div>
         <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Date of birth <span style="color:var(--ht);font-weight:400">(optional)</span></div>
         <input class="inp" id="su-dob" type="date" style="color-scheme:dark">
+      </div>
+      <!-- Nationality with live flag search -->
+      <div>
+        <div style="font-size:12px;color:var(--dm);font-weight:500;margin-bottom:6px">Nationality <span style="color:var(--ht);font-weight:400">(optional)</span></div>
+        <!-- Live flag preview -->
+        <div id="nat-preview" style="display:none;align-items:center;gap:10px;background:rgba(0,240,255,0.06);border:.5px solid rgba(0,240,255,0.25);border-radius:var(--rs);padding:10px 14px;margin-bottom:8px">
+          <span id="nat-flag" style="font-size:24px"></span>
+          <div id="nat-label" style="font-size:13px;font-weight:600;color:var(--cy)"></div>
+          <button onclick="document.getElementById('su-nationality').value='';document.getElementById('nat-preview').style.display='none';_selectedNationality={code:'',country:'',label:''}" style="margin-left:auto;background:none;border:none;color:var(--ht);font-size:12px;cursor:pointer">change</button>
+        </div>
+        <input class="inp" id="su-nationality" type="text" placeholder="Type your nationality e.g. Indian, British..." oninput="onNationalityInput(this.value)" autocomplete="off">
+        <div id="nat-suggestions" style="margin-top:6px"></div>
       </div>
       <div class="err" id="su-err"></div>
       <button class="btn-p" id="su-btn" onclick="doSignup()">CREATE ACCOUNT</button>
@@ -582,7 +594,7 @@ body{background:var(--bg);font-family:"Inter",sans-serif;color:var(--tx);overflo
         <div id="set-av" onclick="openMyProfile();closeSettings()" style="width:48px;height:48px;border-radius:50%;background:var(--cyd);border:2px solid var(--cy);display:flex;align-items:center;justify-content:center;font-family:Orbitron,monospace;font-size:16px;font-weight:700;color:var(--cy);cursor:pointer">S</div>
         <div>
           <div style="font-size:15px;font-weight:600" id="set-username">—</div>
-          <div style="font-size:11px;color:var(--ht);margin-top:2px"><span id="set-city-val">—</span>, <span id="set-emirate-val">—</span></div>
+          <div style="font-size:11px;color:var(--ht);margin-top:2px"><span id="set-city-val">—</span>, <span id="set-emirate-val">—</span> (Region)</div>
           <div style="font-size:11px;color:var(--ht)"><span id="set-country-val">—</span></div>
         </div>
         <button onclick="openMyProfile();closeSettings()" style="margin-left:auto;padding:7px 12px;background:var(--sf);border:.5px solid var(--bd);border-radius:var(--rs);font-size:12px;color:var(--dm);cursor:pointer">Edit</button>
@@ -809,7 +821,36 @@ const hid=(lat,lng)=>`${Math.floor(lat/SZ)}:${Math.floor(lng/SZ)}`;
 const hctr=id=>{const[r,c]=id.split(":").map(Number);return{lat:(r+.5)*SZ,lng:(c+.5)*SZ}};
 const fmt=s=>`${String(Math.floor(s/3600)).padStart(2,"0")}:${String(Math.floor((s%3600)/60)).padStart(2,"0")}:${String(s%60).padStart(2,"0")}`;
 function getCountryCode(countryName) {
-  for(var i=0;i<COUNTRY_BOXES.length;i++){if(COUNTRY_BOXES[i][1].toLowerCase()===countryName.toLowerCase())return COUNTRY_BOXES[i][0];}
+  if(!countryName) return '';
+  var n = countryName.trim().toLowerCase();
+  // Direct 2-letter code
+  if(n.length === 2) return n.toUpperCase();
+  // Common aliases
+  var aliases = {
+    'uae':'AE','united arab emirates':'AE','emirates':'AE',
+    'uk':'GB','united kingdom':'GB','england':'GB','britain':'GB',
+    'usa':'US','united states':'US','america':'US','us':'US',
+    'ksa':'SA','saudi':'SA','saudi arabia':'SA',
+    'india':'IN','pak':'PK','pakistan':'PK',
+    'qatar':'QA','kuwait':'KW','bahrain':'BH','oman':'OM',
+    'australia':'AU','canada':'CA','germany':'DE','france':'FR',
+    'china':'CN','japan':'JP','south korea':'KR','korea':'KR',
+    'egypt':'EG','nigeria':'NG','kenya':'KE','ghana':'GH',
+    'brazil':'BR','argentina':'AR','mexico':'MX',
+    'netherlands':'NL','belgium':'BE','spain':'ES','italy':'IT',
+    'russia':'RU','turkey':'TR','iran':'IR','iraq':'IQ',
+    'jordan':'JO','lebanon':'LB','syria':'SY',
+    'malaysia':'MY','singapore':'SG','indonesia':'ID','thailand':'TH',
+    'philippines':'PH','vietnam':'VN','bangladesh':'BD',
+    'new zealand':'NZ','south africa':'ZA',
+  };
+  if(aliases[n]) return aliases[n];
+  // Match against COUNTRY_BOXES names
+  for(var i=0;i<COUNTRY_BOXES.length;i++){
+    if(COUNTRY_BOXES[i][1].toLowerCase()===n) return COUNTRY_BOXES[i][0];
+    // Partial match
+    if(n.includes(COUNTRY_BOXES[i][1].toLowerCase()) || COUNTRY_BOXES[i][1].toLowerCase().includes(n)) return COUNTRY_BOXES[i][0];
+  }
   return '';
 }
 function pace(km, sec) {
@@ -936,7 +977,9 @@ async function doSignup(){
   const btn=el("su-btn");btn.disabled=true;btn.textContent="Creating account...";
   var countryVal=el("su-country")?.value||"";if(!countryVal&&el("su-country-manual"))countryVal=el("su-country-manual").value.trim();const country=countryVal;const city=el("su-city")?.value.trim()||"Abu Dhabi";
   const emirate=document.getElementById('su-emirate')?.value.trim()||_detectedEmirate||'';
-  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob,country:country,city:city,emirate:emirate}}});
+  const nationality=_selectedNationality.label||'';
+  const nationalityCode=_selectedNationality.code||'';
+  const{data,error}=await sb.auth.signUp({email,password:pass,options:{data:{username:uname,gender:selectedGender||null,dob:dob,country:country,city:city,emirate:emirate,nationality:nationality,nationality_code:nationalityCode}}});
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
   if(error){el("su-err").textContent=error.message;btn.disabled=false;btn.textContent="CREATE ACCOUNT";return;}
   // Email confirmation disabled → session exists, go straight to home
@@ -1092,7 +1135,7 @@ async function viewProfile(userId) {
     var p = res.data;
     _viewingProfile = p;
     var nameEl = el('pv-name'); if (nameEl) nameEl.textContent = p.username || '—';
-    var cityEl = el('pv-city'); if (cityEl) cityEl.textContent = p.city || 'Unknown city';
+    var cityEl = el('pv-city'); if (cityEl) cityEl.textContent = (p.nationality_code?countryCodeToFlag(p.nationality_code)+' ':'')+' '+(p.city || 'Unknown city');
     var gEl = el('pv-gender');
     if (gEl) gEl.textContent = p.gender === 'male' ? '\u2642 Male' : p.gender === 'female' ? '\u2640 Female' : '';
     var secEl = el('pv-sectors'); if (secEl) secEl.textContent = p.total_sectors || 0;
@@ -1730,7 +1773,7 @@ async function loadChallengeHub(filter) {
   if (list) list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';
 
   try {
-    var query = sb.from('profiles').select('id,username,city,country,emirate,total_sectors,total_runs,total_km,gender,avatar_url,open_for_challenge')
+    var query = sb.from('profiles').select('id,username,city,country,emirate,nationality,nationality_code,total_sectors,total_runs,total_km,gender,avatar_url,open_for_challenge')
       .eq('open_for_challenge', true)
       .neq('id', A.user ? A.user.id : '')
       .order('total_sectors', { ascending: false })
@@ -1761,7 +1804,7 @@ async function loadChallengeHub(filter) {
       return '<div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:.5px solid var(--bd);cursor:pointer" onclick="viewProfile(\'' + p.id + '\')">'
         + av
         + '<div style="flex:1">'
-        + '<div style="font-size:13px;font-weight:600">' + (flagIcon||'') + (p.username || '—') + ' ' + gIcon + '</div>'
+        + '<div style="font-size:13px;font-weight:600">' + (p.nationality_code?countryCodeToFlag(p.nationality_code)+' ':flagIcon||'') + (p.username || '—') + ' ' + gIcon + '</div>'
         + '<div style="font-size:10px;color:var(--ht);margin-top:2px">' + (p.city || '') + (p.country ? ', ' + p.country : '') + '</div>'
         + '</div>'
         + '<div style="text-align:right">'
@@ -2411,6 +2454,115 @@ async function shareTerritory() {
   });
 
   } catch(err) { console.error("Share card error:", err); showToast("Share failed: " + (err.message || "Unknown error")); }
+}
+
+
+// ══════════════════════════════════════════════════════
+//  NATIONALITY LIVE FLAG SEARCH
+// ══════════════════════════════════════════════════════
+
+var NATIONALITY_LIST = [
+  ['AE','UAE','Emirati'],['SA','Saudi Arabia','Saudi'],['QA','Qatar','Qatari'],
+  ['KW','Kuwait','Kuwaiti'],['BH','Bahrain','Bahraini'],['OM','Oman','Omani'],
+  ['YE','Yemen','Yemeni'],['IQ','Iraq','Iraqi'],['JO','Jordan','Jordanian'],
+  ['LB','Lebanon','Lebanese'],['SY','Syria','Syrian'],['IL','Israel','Israeli'],
+  ['TR','Turkey','Turkish'],['IR','Iran','Iranian'],
+  ['IN','India','Indian'],['PK','Pakistan','Pakistani'],['BD','Bangladesh','Bangladeshi'],
+  ['LK','Sri Lanka','Sri Lankan'],['NP','Nepal','Nepali'],['AF','Afghanistan','Afghan'],
+  ['MY','Malaysia','Malaysian'],['SG','Singapore','Singaporean'],['ID','Indonesia','Indonesian'],
+  ['PH','Philippines','Filipino'],['TH','Thailand','Thai'],['VN','Vietnam','Vietnamese'],
+  ['CN','China','Chinese'],['JP','Japan','Japanese'],['KR','South Korea','Korean'],
+  ['HK','Hong Kong','Hong Konger'],['TW','Taiwan','Taiwanese'],
+  ['GB','UK','British'],['DE','Germany','German'],['FR','France','French'],
+  ['IT','Italy','Italian'],['ES','Spain','Spanish'],['PT','Portugal','Portuguese'],
+  ['NL','Netherlands','Dutch'],['BE','Belgium','Belgian'],['CH','Switzerland','Swiss'],
+  ['AT','Austria','Austrian'],['PL','Poland','Polish'],['SE','Sweden','Swedish'],
+  ['NO','Norway','Norwegian'],['DK','Denmark','Danish'],['FI','Finland','Finnish'],
+  ['RU','Russia','Russian'],['UA','Ukraine','Ukrainian'],['GR','Greece','Greek'],
+  ['RO','Romania','Romanian'],['CZ','Czech Republic','Czech'],['HU','Hungary','Hungarian'],
+  ['US','USA','American'],['CA','Canada','Canadian'],['MX','Mexico','Mexican'],
+  ['BR','Brazil','Brazilian'],['AR','Argentina','Argentine'],['CO','Colombia','Colombian'],
+  ['CL','Chile','Chilean'],['PE','Peru','Peruvian'],['VE','Venezuela','Venezuelan'],
+  ['AU','Australia','Australian'],['NZ','New Zealand','New Zealander'],
+  ['EG','Egypt','Egyptian'],['MA','Morocco','Moroccan'],['NG','Nigeria','Nigerian'],
+  ['ZA','South Africa','South African'],['KE','Kenya','Kenyan'],['ET','Ethiopia','Ethiopian'],
+  ['GH','Ghana','Ghanaian'],['TZ','Tanzania','Tanzanian'],['UG','Uganda','Ugandan'],
+  ['TN','Tunisia','Tunisian'],['DZ','Algeria','Algerian'],['SD','Sudan','Sudanese'],
+  ['SO','Somalia','Somali'],['LY','Libya','Libyan'],
+  ['PG','Papua New Guinea','Papua New Guinean'],['FJ','Fiji','Fijian'],
+  ['MM','Myanmar','Burmese'],['KH','Cambodia','Cambodian'],['LA','Laos','Laotian'],
+];
+
+function searchNationality(query) {
+  if (!query || query.length < 1) return [];
+  var q = query.toLowerCase().trim();
+  var results = [];
+  for (var i = 0; i < NATIONALITY_LIST.length; i++) {
+    var n = NATIONALITY_LIST[i];
+    var code = n[0].toLowerCase();
+    var country = n[1].toLowerCase();
+    var nationality = n[2].toLowerCase();
+    if (code === q || country.startsWith(q) || nationality.startsWith(q) ||
+        country.includes(q) || nationality.includes(q)) {
+      results.push(n);
+      if (results.length >= 4) break;
+    }
+  }
+  return results;
+}
+
+function onNationalityInput(val) {
+  var preview = document.getElementById('nat-preview');
+  var suggestions = document.getElementById('nat-suggestions');
+  if (!preview || !suggestions) return;
+
+  if (!val || val.trim() === '') {
+    preview.style.display = 'none';
+    suggestions.innerHTML = '';
+    return;
+  }
+
+  var results = searchNationality(val);
+  if (results.length === 0) {
+    preview.style.display = 'none';
+    suggestions.innerHTML = '<div style="font-size:11px;color:var(--ht);padding:6px 0">No match found</div>';
+    return;
+  }
+
+  // Show suggestions
+  suggestions.innerHTML = results.map(function(r) {
+    var flag = countryCodeToFlag(r[0]);
+    return '<div onclick="selectNationality(\'' + r[0] + '\',\'' + r[1] + '\',\'' + r[2] + '\')" '
+      + 'style="display:flex;align-items:center;gap:8px;padding:8px 10px;cursor:pointer;border-radius:var(--rs);background:var(--sf);margin-bottom:4px;border:.5px solid var(--bd)">'
+      + '<span style="font-size:18px">' + flag + '</span>'
+      + '<div><div style="font-size:13px;font-weight:600">' + r[2] + '</div>'
+      + '<div style="font-size:10px;color:var(--ht)">' + r[1] + '</div></div>'
+      + '</div>';
+  }).join('');
+
+  // Auto-select if exact match
+  if (results.length === 1 || (results[0][1].toLowerCase() === val.toLowerCase()) ||
+      (results[0][2].toLowerCase() === val.toLowerCase())) {
+    selectNationality(results[0][0], results[0][1], results[0][2]);
+  }
+}
+
+var _selectedNationality = { code: '', country: '', label: '' };
+
+function selectNationality(code, country, label) {
+  _selectedNationality = { code: code, country: country, label: label };
+  var input = document.getElementById('su-nationality');
+  var preview = document.getElementById('nat-preview');
+  var suggestions = document.getElementById('nat-suggestions');
+  if (input) input.value = label;
+  if (preview) {
+    preview.style.display = 'flex';
+    var flagEl = document.getElementById('nat-flag');
+    var labelEl = document.getElementById('nat-label');
+    if (flagEl) flagEl.textContent = countryCodeToFlag(code);
+    if (labelEl) labelEl.textContent = label + ' · ' + country;
+  }
+  if (suggestions) suggestions.innerHTML = '';
 }
 
 
@@ -3201,7 +3353,7 @@ function switchLbTier(tier) {
 }
 async function loadLB(tier){
   tier = tier || _currentLbTier || 'city';const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await (function(){
-    var q=sb.from("profiles").select("id,username,city,emirate,country,total_sectors,total_runs,total_km,gender,avatar_url").order("total_sectors",{ascending:false}).order("total_km",{ascending:false}).order("created_at",{ascending:true}).limit(50);
+    var q=sb.from("profiles").select("id,username,city,emirate,country,nationality,nationality_code,total_sectors,total_runs,total_km,gender,avatar_url").order("total_sectors",{ascending:false}).order("total_km",{ascending:false}).order("created_at",{ascending:true}).limit(50);
     if(tier==="city"){
       if(A.profile&&A.profile.city&&A.profile.city.trim()!=="")
         q=q.ilike("city",A.profile.city.trim());
@@ -3214,7 +3366,7 @@ async function loadLB(tier){
     }
     return q;
   })();if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;const gIcon=row.gender==="male"?'<span style="font-size:11px;color:#4a9eff;margin-left:4px">&#9794;</span>':row.gender==="female"?'<span style="font-size:11px;color:#ff6eb0;margin-left:4px">&#9792;</span>':"";
-      return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}" style="${isMe?"":"cursor:pointer"}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1;cursor:${isMe?"default":"pointer"}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}""><div style="font-size:13px;font-weight:600">${(()=>{var cc=getCountryCode(row.country||"");return cc?countryCodeToFlag(cc)+" ":"";})()} ${row.username}${gIcon}${isMe?" <span style=\"font-size:10px;color:var(--cy)\">(you)</span>":""}</div><div style="font-size:10px;color:var(--ht)">${row.city||""}</div></div><div style="text-align:right;cursor:pointer" onclick="viewRivalTerritory('${row.id}','${row.username}')" title="View territory"><div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--rd)">sectors ↗</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
+      return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}" style="${isMe?"":"cursor:pointer"}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1;cursor:${isMe?"default":"pointer"}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}""><div style="font-size:13px;font-weight:600">${(row.nationality_code||row.country)?countryCodeToFlag(row.nationality_code||getCountryCode(row.country||""))+" ":""} ${row.username}${gIcon}${isMe?" <span style=\"font-size:10px;color:var(--cy)\">(you)</span>":""}</div><div style="font-size:10px;color:var(--ht)">${row.city||""}</div></div><div style="text-align:right;cursor:pointer" onclick="viewRivalTerritory('${row.id}','${row.username}')" title="View territory"><div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--rd)">sectors ↗</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
 async function homeUI(){
   // Auto-fill city/emirate/country if missing from profile
   if(A.user&&A.profile&&(!A.profile.city||A.profile.city.trim()==="")&&A.pos){
