@@ -914,6 +914,8 @@ async function doLogin(){
     try{const{data:p}=await sb.from("profiles").select("*").eq("id",A.user.id).single();if(p)A.profile=p;}catch(e){}
     loadTerritory().catch(()=>{});
     loadFogExplored().catch(()=>{});
+    // Sync sector count from territory table on login
+    syncSectorCount().catch(()=>{});
     try{await setSessionKey();}catch(e){}
     startSessionWatch();startRT();startGPS();startChallengeWatch();startReactionWatch();loadSettings().catch(()=>{});checkSeasonReset();restoreSessionState();
     btn.disabled=false;btn.textContent="LOGIN";
@@ -1153,15 +1155,39 @@ async function sendChallenge(distKm) {
 }
 
 function startChallengeWatch() {
-  if (_challengeCh) { sb.removeChannel(_challengeCh); }
-  _challengeCh = sb.channel('challenge_' + (A.user ? A.user.id : 'x'))
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'challenges' }, function(payload) {
+  if (_challengeCh) { try{sb.removeChannel(_challengeCh);}catch(e){} }
+  if (!A.user) return;
+  _challengeCh = sb.channel('challenge_' + A.user.id)
+    // Listen for NEW challenges sent TO me
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'challenges',
+      filter: 'challenged_id=eq.' + A.user.id
+    }, function(payload) {
       var row = payload.new;
       if (!row) return;
+      if (row.status === 'pending') {
+        _activeChallenge = row;
+        showIncomingChallenge(row);
+        doVibrate([200, 100, 200]);
+        showToast(row.challenger_name + ' challenged you!', true);
+      }
+    })
+    // Listen for updates to challenges I'm involved in
+    .on('postgres_changes', {
+      event: 'UPDATE',
+      schema: 'public',
+      table: 'challenges'
+    }, function(payload) {
+      var row = payload.new;
+      if (!row) return;
+      // Challenge I sent - track acceptance/decline
       if (_activeChallenge && row.id === _activeChallenge.id) {
         _activeChallenge = row;
         if (row.status === 'accepted' && !_challengeSess) {
-          startChallengeRun();
+          showToast('Challenge accepted! Get ready...', true);
+          setTimeout(function() { startChallengeRun(); }, 1500);
         }
         if (row.status === 'declined') {
           showToast(_activeChallenge.challenged_name + ' declined the challenge');
@@ -1171,13 +1197,42 @@ function startChallengeWatch() {
           showChallengeResult(row);
         }
       }
-      // Incoming challenge for challenged user
-      if (row.challenger_id !== A.user.id && row.challenged_id === A.user.id && row.status === 'pending') {
-        _activeChallenge = row;
-        showIncomingChallenge(row);
-      }
     })
-    .subscribe();
+    .subscribe(function(status) {
+      console.log('Challenge channel status:', status);
+    });
+  // Also poll for pending challenges on startup (in case notification was missed)
+  checkPendingChallenges();
+}
+
+async function syncSectorCount() {
+  if (!A.user || !A.profile) return;
+  try {
+    var res = await sb.from('territory').select('*', { count: 'exact', head: true }).eq('user_id', A.user.id);
+    var realCount = res.count || 0;
+    if (A.profile.total_sectors !== realCount) {
+      A.profile.total_sectors = realCount;
+      // Update in DB silently
+      await sb.from('profiles').update({ total_sectors: realCount }).eq('id', A.user.id);
+      console.log('Sector count synced:', realCount);
+    }
+  } catch(e) {}
+}
+
+async function checkPendingChallenges() {
+  if (!A.user) return;
+  try {
+    var res = await sb.from('challenges')
+      .select('*')
+      .eq('challenged_id', A.user.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (res.data && res.data.length > 0) {
+      _activeChallenge = res.data[0];
+      showIncomingChallenge(res.data[0]);
+    }
+  } catch(e) { console.error(e); }
 }
 
 function showIncomingChallenge(ch) {
@@ -1381,6 +1436,8 @@ async function captureHex(lat,lng,activity){
   if(existing&&existing.user_id===A.user.id&&existing.mode===captureMode)return false;const{error}=await sb.from("territory").upsert({hex_id:id,user_id:A.user.id,username:A.profile.username,city:"Abu Dhabi",mode:captureMode,captured_at:new Date().toISOString()},{onConflict:"hex_id"});if(!error){A.allTerritory[id]={user_id:A.user.id,username:A.profile.username,mode:captureMode};var mult=checkBountyCapture(id);A.sess.secs+=mult;A.daily+=mult;flashCap(A.sess.secs,mult);
     playCaptureSound();
     if(mult>1)playBountySound();
+    // Update local sector count immediately so home screen is accurate
+    if(A.profile)A.profile.total_sectors=(A.profile.total_sectors||0)+1;
     // Post to activity feed (throttle - only every 5 captures)
     if(A.sess.secs%5===0){
       postActivity('capture','captured sector #'+A.sess.secs+' in '+((A.profile&&A.profile.city)||'the city'));
@@ -1673,20 +1730,22 @@ async function loadChallengeHub(filter) {
   if (list) list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';
 
   try {
-    var query = sb.from('profiles').select('id,username,city,country,total_sectors,total_runs,total_km,gender,avatar_url,open_for_challenge')
+    var query = sb.from('profiles').select('id,username,city,country,emirate,total_sectors,total_runs,total_km,gender,avatar_url,open_for_challenge')
       .eq('open_for_challenge', true)
       .neq('id', A.user ? A.user.id : '')
       .order('total_sectors', { ascending: false })
-      .limit(40);
+      .limit(50);
 
-    if (_challengeHubFilter === 'city' && A.profile && A.profile.city) {
-      query = query.eq('city', A.profile.city);
-    } else if (_challengeHubFilter === 'country' && A.profile && A.profile.country) {
-      query = query.eq('country', A.profile.country);
-    } else if (_challengeHubFilter === 'nearby' && A.pos) {
-      // Fallback to city for "nearby"
-      if (A.profile && A.profile.city) query = query.eq('city', A.profile.city);
+    if (_challengeHubFilter === 'city' && A.profile && A.profile.city && A.profile.city.trim() !== '') {
+      query = query.ilike('city', A.profile.city.trim());
+    } else if (_challengeHubFilter === 'emirate' && A.profile && A.profile.emirate && A.profile.emirate.trim() !== '') {
+      query = query.ilike('emirate', A.profile.emirate.trim());
+    } else if (_challengeHubFilter === 'country' && A.profile && A.profile.country && A.profile.country.trim() !== '') {
+      query = query.ilike('country', A.profile.country.trim());
+    } else if (_challengeHubFilter === 'nearby' && A.profile && A.profile.city && A.profile.city.trim() !== '') {
+      query = query.ilike('city', A.profile.city.trim());
     }
+    // global or empty = no filter, show all
 
     var res = await query;
     if (!list) return;
@@ -2490,7 +2549,7 @@ async function loadHallOfFame(containerId) {
 async function loadMonthlyLeaderboard(tier, containerId) {
   var c = document.getElementById(containerId);
   if (!c || !A.profile) return;
-  var query = sb.from('profiles').select('id,username,gender,city,emirate,country,monthly_sectors,avatar_url').order('monthly_sectors', { ascending: false }).limit(25);
+  var query = sb.from('profiles').select('id,username,gender,city,emirate,country,monthly_sectors,avatar_url').order('monthly_sectors', { ascending: false }).order('total_sectors', { ascending: false }).order('username', { ascending: true }).limit(50);
   if (tier === 'city') query = query.eq('city', A.profile.city || '');
   else if (tier === 'emirate') query = query.eq('emirate', A.profile.emirate || '');
   else if (tier === 'country') query = query.eq('country', A.profile.country || '');
@@ -2814,6 +2873,25 @@ async function postActivity(type, message) {
   } catch(e) {}
 }
 
+async function loadMyReactions() {
+  if (!A.user) return;
+  try {
+    var res = await sb.from('reactions')
+      .select('*')
+      .eq('to_user_id', A.user.id)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    if (res.data && res.data.length > 0) {
+      var latest = res.data[0];
+      var lastSeen = localStorage.getItem('chase_last_reaction');
+      if (lastSeen !== latest.id) {
+        localStorage.setItem('chase_last_reaction', latest.id);
+        showToast(latest.from_username + ' sent you ' + latest.emoji, true);
+      }
+    }
+  } catch(e) {}
+}
+
 async function loadActivityFeed(containerId) {
   var c = document.getElementById(containerId);
   if (!c) return;
@@ -3038,17 +3116,32 @@ function onMove(lat,lng){
   el("run-pace").textContent=rollingPace();
   el("run-secs").textContent=A.sess.secs;
 }
-async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});const myCount=Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;var newMonthly=(A.profile.monthly_sectors||0)+A.sess.secs;
+async function endRun(){if(!A.sess)return;A.sess.on=false;clearInterval(_tick);stopAnim();try{await sb.from("sessions").insert({user_id:A.user.id,distance_km:parseFloat(A.sess.km.toFixed(3)),duration_sec:A.sess.elapsed,sectors_captured:A.sess.secs,calories:A.sess.cal,mode:A.mode,city:"Abu Dhabi"});// Count from DB for accuracy
+    const{count:dbCount}=await sb.from("territory").select("*",{count:"exact",head:true}).eq("user_id",A.user.id);
+    const myCount=dbCount||Object.values(A.allTerritory).filter(t=>t.user_id===A.user.id).length;
+    // Monthly: count sectors captured this month from DB
+    const curSeason=getCurrentSeason();
+    var newMonthly;
+    if(A.profile&&A.profile.season_month===curSeason){
+      newMonthly=(A.profile.monthly_sectors||0)+A.sess.secs;
+    }else{
+      // New month - reset monthly count
+      newMonthly=A.sess.secs;
+    }
     await sb.from("profiles").update({
       total_sectors:myCount,
       monthly_sectors:newMonthly,
-      season_month:getCurrentSeason(),
+      season_month:curSeason,
       total_km:parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3)),
       total_runs:(A.profile.total_runs||0)+1,
       total_cal:(A.profile.total_cal||0)+A.sess.cal,
       last_active:new Date().toISOString()
     }).eq("id",A.user.id);
-    if(A.profile){A.profile.monthly_sectors=newMonthly;}if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
+    if(A.profile){
+      A.profile.total_sectors=myCount;
+      A.profile.monthly_sectors=newMonthly;
+      A.profile.season_month=curSeason;
+    }if(A.profile){A.profile.total_runs++;A.profile.total_km=parseFloat(((A.profile.total_km||0)+A.sess.km).toFixed(3));A.profile.total_cal=(A.profile.total_cal||0)+A.sess.cal;A.profile.total_sectors=myCount;}}catch(e){console.error(e);}try{const today=new Date().toDateString();if(A.dailyDate!==today)A.daily=A.sess.secs;A.dailyDate=today;localStorage.setItem("chase_daily",JSON.stringify({daily:A.daily,date:A.dailyDate}));}catch(_){}buildSummary();goTo("summary");}
 function buildRunMap(){if(A.map){A.map.remove();A.map=null;}A.map=L.map("map",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],16);L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,opacity:1,attribution:"Esri"}).addTo(A.map);const ico=L.divIcon({className:"",html:'<div style="width:16px;height:16px;border-radius:50%;background:#00f0ff;border:3px solid rgba(255,255,255,.9);box-shadow:0 0 0 4px rgba(0,240,255,.25)"></div>',iconSize:[16,16],iconAnchor:[8,8]});A.marker=L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.map);var routeColor=A.mode==="cycle"?"#ff9500":"#00f0ff";A.route=L.polyline([[A.pos.lat,A.pos.lng]],{color:routeColor,weight:3,opacity:.7}).addTo(A.map);A.cvs=el("cvs");A.ctx=A.cvs.getContext("2d");setTimeout(()=>{if(A.map){A.map.invalidateSize(true);szCvs();}},250);A.map.on("resize move zoom",()=>{szCvs();drawH(A.ctx,A.cvs,A.map,false);});startPresence();runAnim();}
 function buildTerritoryMap(){if(A.mapT){A.mapT.remove();A.mapT=null;}A.mapT=L.map("map-t",{zoomControl:false,attributionControl:false}).setView([A.pos.lat,A.pos.lng],14);L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",{maxZoom:20,opacity:1,attribution:"Esri"}).addTo(A.mapT);const ico=L.divIcon({className:"",html:'<div style="width:12px;height:12px;border-radius:50%;background:#00f0ff;border:2px solid white"></div>',iconSize:[12,12],iconAnchor:[6,6]});L.marker([A.pos.lat,A.pos.lng],{icon:ico}).addTo(A.mapT);A.cvsT=el("cvs-t");A.ctxT=A.cvsT.getContext("2d");setTimeout(()=>{if(A.mapT){A.mapT.invalidateSize(true);szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);drawFogOfWar(A.ctxT,A.cvsT,A.mapT);}},350);A.mapT.on("resize move zoom",()=>{szCvsT();drawH(A.ctxT,A.cvsT,A.mapT,true);});const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;const rivals=Object.entries(A.allTerritory).filter(([,v])=>v.user_id!==A.user?.id).length;const rv=el("rv-alert");if(rivals>0&&rv){rv.textContent=`${rivals} sectors held by rivals nearby`;rv.style.display="block";}el("t-count").textContent=`${myCount} sectors`;}
 function szCvs(){if(!A.cvs||!A.map)return;const c=A.map.getContainer();A.cvs.width=c.clientWidth;A.cvs.height=c.clientHeight;}
@@ -3108,15 +3201,40 @@ function switchLbTier(tier) {
 }
 async function loadLB(tier){
   tier = tier || _currentLbTier || 'city';const list=el("lb-list");list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Loading...</div>';try{const{data}=await (function(){
-    var q=sb.from("profiles").select("id,username,city,emirate,country,total_sectors,total_runs,total_km,gender,avatar_url").order("total_sectors",{ascending:false}).limit(30);
-    if(tier==="city"&&A.profile&&A.profile.city)q=q.eq("city",A.profile.city);
-    else if(tier==="emirate"&&A.profile&&A.profile.emirate)q=q.eq("emirate",A.profile.emirate);
-    else if(tier==="country"&&A.profile&&A.profile.country)q=q.eq("country",A.profile.country);
+    var q=sb.from("profiles").select("id,username,city,emirate,country,total_sectors,total_runs,total_km,gender,avatar_url").order("total_sectors",{ascending:false}).order("total_km",{ascending:false}).order("created_at",{ascending:true}).limit(50);
+    if(tier==="city"){
+      if(A.profile&&A.profile.city&&A.profile.city.trim()!=="")
+        q=q.ilike("city",A.profile.city.trim());
+    } else if(tier==="emirate"){
+      if(A.profile&&A.profile.emirate&&A.profile.emirate.trim()!=="")
+        q=q.ilike("emirate",A.profile.emirate.trim());
+    } else if(tier==="country"){
+      if(A.profile&&A.profile.country&&A.profile.country.trim()!=="")
+        q=q.ilike("country",A.profile.country.trim());
+    }
     return q;
   })();if(!data||!data.length){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">No runners yet - be first!</div>';return;}list.innerHTML=data.map((row,i)=>{const isMe=row.id===A.user?.id;const medal=i===0?"#1":i===1?"#2":i===2?"#3":`#${i+1}`;const gIcon=row.gender==="male"?'<span style="font-size:11px;color:#4a9eff;margin-left:4px">&#9794;</span>':row.gender==="female"?'<span style="font-size:11px;color:#ff6eb0;margin-left:4px">&#9792;</span>':"";
       return`<div class="lrow${isMe?" me":""}"><div class="lrank${i<3?" top":""}">${medal}</div><div class="lav${isMe?" me":""}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}" style="${isMe?"":"cursor:pointer"}">${row.username.charAt(0).toUpperCase()}</div><div style="flex:1;cursor:${isMe?"default":"pointer"}" onclick="${isMe?"":"viewProfile('"+row.id+"')"}""><div style="font-size:13px;font-weight:600">${(()=>{var cc=getCountryCode(row.country||"");return cc?countryCodeToFlag(cc)+" ":"";})()} ${row.username}${gIcon}${isMe?" <span style=\"font-size:10px;color:var(--cy)\">(you)</span>":""}</div><div style="font-size:10px;color:var(--ht)">${row.city||""}</div></div><div style="text-align:right;cursor:pointer" onclick="viewRivalTerritory('${row.id}','${row.username}')" title="View territory"><div style="font-family:Orbitron,monospace;font-size:14px;font-weight:700;color:var(--cy)">${row.total_sectors||0}</div><div style="font-size:10px;color:var(--rd)">sectors ↗</div></div></div>`;}).join("");}catch(e){list.innerHTML='<div style="text-align:center;padding:40px;color:var(--ht);font-size:13px">Failed to load</div>';}}
-async function homeUI(){if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("profiles").select("username,total_sectors").neq("id",A.user.id).order("total_sectors",{ascending:false}).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=(data[0].total_sectors||0)+" sectors - #1 rival";}}catch(_){}
+async function homeUI(){
+  // Auto-fill city/emirate/country if missing from profile
+  if(A.user&&A.profile&&(!A.profile.city||A.profile.city.trim()==="")&&A.pos){
+    var detectedCountry=detectCountryFromCoords(A.pos.lat,A.pos.lng);
+    if(detectedCountry){
+      var detectedEmirate=detectEmirateFromCoords(A.pos.lat,A.pos.lng,detectedCountry.code);
+      try{
+        await sb.from("profiles").update({
+          country:detectedCountry.name,
+          emirate:detectedEmirate||"",
+          city:detectedEmirate||detectedCountry.name
+        }).eq("id",A.user.id);
+        A.profile.country=detectedCountry.name;
+        A.profile.emirate=detectedEmirate||"";
+        A.profile.city=detectedEmirate||detectedCountry.name;
+      }catch(e){}
+    }
+  }if(!A.profile)return;const h=new Date().getHours();el("greet").textContent=h<12?"good morning":h<17?"good afternoon":"good evening";el("uname").textContent=A.profile.username;el("av-letter").textContent=A.profile.username.charAt(0).toUpperCase();const myCount=Object.values(A.allTerritory).filter(v=>v.user_id===A.user?.id).length;el("h-sec").textContent=myCount;el("h-runs").textContent=A.profile.total_runs||0;el("h-km").textContent=parseFloat(A.profile.total_km||0).toFixed(1);el("h-kcal").textContent=A.profile.total_cal||0;try{const d=JSON.parse(localStorage.getItem("chase_daily")||"{}");if(d.date===new Date().toDateString()){A.daily=d.daily||0;A.dailyDate=d.date;}else A.daily=0;}catch(_){}const g=Math.min(A.daily,10);el("g-txt").textContent=`${g} / 10`;el("g-bar").style.width=`${(g/10)*100}%`;try{const{data}=await sb.from("profiles").select("username,total_sectors").neq("id",A.user.id).order("total_sectors",{ascending:false}).limit(1);if(data?.[0]){el("rv-name").textContent=data[0].username;el("rv-info").textContent=(data[0].total_sectors||0)+" sectors - #1 rival";}}catch(_){}
   loadCityKing().catch(()=>{});
+  loadMyReactions().catch(()=>{});
   // Season countdown banner
   var banner = getSeasonBanner();
   var seasonEl = document.getElementById('season-banner');
